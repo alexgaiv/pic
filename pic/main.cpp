@@ -4,9 +4,16 @@
 
 #include <iostream>
 #include <math.h>
+#include <mgl2\mgl.h>
 #include "particle_mover.h"
 
 using namespace std;
+
+struct ErrorStruct
+{
+	double abs;
+	double rel;
+};
 
 ostream &operator<<(ostream &os, const Vector3d &v)
 {
@@ -14,7 +21,7 @@ ostream &operator<<(ostream &os, const Vector3d &v)
 	return os;
 }
 
-void Test1(int steps)
+void Test1(int steps, ErrorStruct &r_error, ErrorStruct &p_error, bool output = false)
 {
 	Particle p;
 	p.mass = electronMass;
@@ -22,8 +29,6 @@ void Test1(int steps)
 
 	const double mc = p.mass * c;
 	const double E0 = 43;
-
-	cout << "\n\nTest 1 (N = " << steps << ")\n\n";
 
 	for (int i = 0; i < 3; i++) // for each axis
 	{
@@ -44,21 +49,25 @@ void Test1(int steps)
 			Vector3d p_theor;
 			p_theor[i] = mc;
 
-			double r_error_abs = (p1.coords - r_theor).Length();
-			double p_error_abs = (p1.momentum - p_theor).Length();
-			double r_error_rel = r_error_abs / r_theor.Length();
-			double p_error_rel = p_error_abs / p_theor.Length();
+			r_error.abs = (p1.coords - r_theor).Length();
+			p_error.abs = (p1.momentum - p_theor).Length();
+			r_error.rel = r_error.abs / r_theor.Length();
+			p_error.rel = p_error.abs / p_theor.Length();
 
-			cout << "E = " << E << endl;
-			cout << "r = " << r_theor << ", p = " << p_theor << endl;
-			cout << "r = " << p1.coords << ", p = " << p1.momentum << endl;
-			cout << "r_error_abs = " << r_error_abs << ", p_error_abs = " << p_error_abs << endl;
-			cout << "r_error_rel = " << r_error_rel << ", p_error_rel = " << p_error_rel << "\n\n";
+			if (output)
+			{
+				cout << "Test 1 (N = " << steps << ")\n";
+				cout << "E = " << E << endl;
+				cout << "r = " << r_theor << ", p = " << p_theor << endl;
+				cout << "r = " << p1.coords << ", p = " << p1.momentum << endl;
+				cout << "r_error_abs = " << r_error.abs << ", p_error_abs = " << p_error.abs << endl;
+				cout << "r_error_rel = " << r_error.rel << ", p_error_rel = " << p_error.rel << "\n\n";
+			}
 		}
 	}
 }
 
-void Test2(int steps)
+void Test2(int steps, ErrorStruct &r_error, ErrorStruct &p_error, bool output = false)
 {
 	Particle p;
 	p.mass = electronMass;
@@ -79,23 +88,151 @@ void Test2(int steps)
 	Vector3d r_theor(0, -2 * p0*c / (p.charge * B0), 0);
 	Vector3d p_theor(-p0, 0, 0);
 
-	double r_error_abs = (p1.coords - r_theor).Length();
-	double p_error_abs = (p1.momentum - p_theor).Length();
-	double r_error_rel = r_error_abs / r_theor.Length();
-	double p_error_rel = p_error_abs / p_theor.Length();
+	r_error.abs = (p1.coords - r_theor).Length();
+	p_error.abs = (p1.momentum - p_theor).Length();
+	r_error.rel = r_error.abs / r_theor.Length();
+	p_error.rel = p_error.abs / p_theor.Length();
 
-	cout << "\n\nTest 2 (N = " << steps << ")\n\n";
-	cout << "B = " << B << endl;
-	cout << "r = " << r_theor << ", p = " << p_theor << endl;
-	cout << "r = " << p1.coords << ", p = " << p1.momentum << endl;
-	cout << "r_error_abs = " << r_error_abs << ", p_error_abs = " << p_error_abs << endl;
-	cout << "r_error_rel = " << r_error_rel << ", p_error_rel = " << p_error_rel << "\n\n";
+	if (output)
+	{
+		cout << "\n\nTest 2 (N = " << steps << ")\n";
+		cout << "B = " << B << endl;
+		cout << "r = " << r_theor << ", p = " << p_theor << endl;
+		cout << "r = " << p1.coords << ", p = " << p1.momentum << endl;
+		cout << "r_error_abs = " << r_error.abs << ", p_error_abs = " << p_error.abs << endl;
+		cout << "r_error_rel = " << r_error.rel << ", p_error_rel = " << p_error.rel << "\n\n";
+	}
+}
+
+void BuildPlots()
+{
+	ErrorStruct r_error = { };
+	ErrorStruct p_error = { };
+
+	mglData y;
+	mglGraph gr;
+
+	int N;
+	const int startN = 100;
+	const int dN = 50;
+	const int maxN = 2500;
+	const int s = maxN / dN;
+
+	double r_rel_plot[s] = { };
+	double r_abs_plot[s] = { };
+	double p_rel_plot[s] = { };
+	double p_abs_plot[s] = { };
+
+	/*Test 1*/
+	N = startN;
+	for (int i = 0; i < s; i++, N += dN)
+	{
+		Test1(N, r_error, p_error);
+		r_rel_plot[i] = r_error.rel;
+		r_abs_plot[i] = r_error.abs;
+		p_rel_plot[i] = p_error.rel;
+		p_abs_plot[i] = p_error.abs;
+	}
+
+	gr.Title("Test 1 (Coords)");
+	gr.AddLegend("relative error", "b");
+	gr.AddLegend("absolute error", "g");
+	gr.SetRanges(startN, maxN, 0, r_rel_plot[0] * 1.1);
+	gr.Label('x', "steps");
+	gr.Label('y', "error");
+	gr.Axis();
+	gr.Legend();
+	y.Set(r_rel_plot, s);
+	gr.Plot(y, "b");
+	y.Set(r_abs_plot, s);
+	gr.Plot(y, "g");
+
+	gr.WriteBMP("plot/test1-1.bmp");
+	gr.ClearFrame();
+
+	gr.SetSize(1500, 600);
+	gr.SubPlot(2, 1, 0);
+	gr.Title("Test 1 (Momentum, rel)");
+	gr.SetRanges(startN, maxN, 0, 1e-13);
+	gr.Label('x', "steps");
+	gr.Label('y', "error");
+	gr.Axis();
+	y.Set(p_rel_plot, s);
+	gr.Plot(y);
+
+	gr.SubPlot(2, 1, 1);
+	gr.Title("Test 1 (Momentum, abs)");
+	gr.SetRanges(startN, maxN, 0, 1e-29);
+	gr.Label('x', "steps");
+	gr.Label('y', "error");
+	gr.Axis();
+	y.Set(p_abs_plot, s);
+	gr.Plot(y, "g");
+
+	gr.WriteBMP("plot/test1-2.bmp");
+	gr.ClearFrame();
+
+	/*Test 2*/
+	N = startN;
+	for (int i = 0; i < s; i++, N += dN)
+	{
+		Test2(N, r_error, p_error);
+		r_rel_plot[i] = r_error.rel;
+		r_abs_plot[i] = r_error.abs;
+		p_rel_plot[i] = p_error.rel;
+		p_abs_plot[i] = p_error.abs;
+	}
+
+	gr.SubPlot(2, 1, 0);
+	gr.Title("Test 2 (Coords, rel)");
+	gr.SetRanges(startN, maxN, 0, r_rel_plot[0] * 1.1);
+	gr.Label('x', "steps");
+	gr.Label('y', "error");
+	gr.Axis();
+	y.Set(r_rel_plot, s);
+	gr.Plot(y);
+
+	gr.SubPlot(2, 1, 1);
+	gr.Title("Test 2 (Coords, abs)");
+	gr.SetRanges(startN, maxN, 0, r_abs_plot[0] * 1.1);
+	gr.Label('x', "steps");
+	gr.Label('y', "error");
+	gr.Axis();
+	y.Set(r_abs_plot, s);
+	gr.Plot(y, "g");
+
+	gr.WriteBMP("plot/test2-1.bmp");
+	gr.ClearFrame();
+
+	gr.SetSize(600, 400);
+	gr.SubPlot(1, 1, 0);
+	gr.Title("Test 2 (Momentum)");
+	gr.AddLegend("relative error", "b");
+	gr.AddLegend("absolute error", "g");
+	gr.SetRanges(startN, maxN, 0, 1e-4);
+	gr.Label('x', "steps");
+	gr.Label('y', "error");
+	gr.Axis();
+	gr.Legend();
+	y.Set(p_rel_plot, s);
+	gr.Plot(y, "b");
+	y.Set(p_abs_plot, s);
+	gr.Plot(y, "g");
+
+	gr.WriteBMP("plot/test2-2.bmp");
 }
 
 int main()
 {
-	Test1(100);
-	Test2(100);
+	ErrorStruct r_error = { };
+	ErrorStruct p_error = { };
+	
+	Test1(100, r_error, p_error, true);
+	Test2(100, r_error, p_error, true);
+
+	cout << "building plots...";
+	BuildPlots();
+	cout << "done.";
 	getchar();
 	return 0;
 }

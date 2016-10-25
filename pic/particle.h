@@ -19,8 +19,7 @@ public:
 		mass = charge = 0.0;
 	}
 
-	Vector3d Velocity() const
-	{
+	Vector3d Velocity() const {
 		return momentum / sqrt(mass * mass + (momentum / c).Square());
 	}
 };
