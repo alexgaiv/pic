@@ -6,6 +6,7 @@
 #include <math.h>
 #include <mgl2\mgl.h>
 #include "particle_mover.h"
+#include "grid.h"
 
 using namespace std;
 
@@ -21,6 +22,17 @@ ostream &operator<<(ostream &os, const Vector3d &v)
 	return os;
 }
 
+void ConstantField(YeeGrid &grid, const Vector3d &E, const Vector3d &B)
+{
+	fill(grid.Ex.GetData().begin(), grid.Ex.GetData().end(), E.x);
+	fill(grid.Ey.GetData().begin(), grid.Ey.GetData().end(), E.y);
+	fill(grid.Ez.GetData().begin(), grid.Ez.GetData().end(), E.z);
+
+	fill(grid.Bx.GetData().begin(), grid.Bx.GetData().end(), B.x);
+	fill(grid.By.GetData().begin(), grid.By.GetData().end(), B.y);
+	fill(grid.Bz.GetData().begin(), grid.Bz.GetData().end(), B.z);
+}
+
 void Test1(int steps, ErrorStruct &r_error, ErrorStruct &p_error, bool output = false)
 {
 	Particle p;
@@ -30,9 +42,11 @@ void Test1(int steps, ErrorStruct &r_error, ErrorStruct &p_error, bool output = 
 	const double mc = p.mass * c;
 	const double E0 = 43;
 
-	for (int i = 0; i < 3; i++) // for each axis
+	int n1 = output ? 3 : 1;
+	int n2 = output ? -1 : 0;
+	for (int i = 0; i < n1; i++) // for each axis
 	{
-		for (int k = 1; k >= -1; k -= 2) // for each direction
+		for (int k = 1; k >= n2; k -= 2) // for each direction
 		{
 			Vector3d E;
 			Vector3d B;
@@ -40,9 +54,12 @@ void Test1(int steps, ErrorStruct &r_error, ErrorStruct &p_error, bool output = 
 			double Ek = E0 * k;
 			E[i] = Ek;
 
+			YeeGrid grid(Vector3d(-30), Vector3d(30), Vector3i(15, 20, 12));
+			ConstantField(grid, E, B);
+
 			double dt = mc / (p.charge * Ek * steps);
 
-			Particle p1 = ParticleMover(E, B).MoveParticle(p, dt, steps);
+			Particle p1 = ParticleMover().MoveParticle(p, dt, steps, grid);
 
 			Vector3d r_theor;
 			r_theor[i] = mc * c / (p.charge * Ek) * (sqrt(2.0) - 1.0);
@@ -81,9 +98,12 @@ void Test2(int steps, ErrorStruct &r_error, ErrorStruct &p_error, bool output = 
 	Vector3d B(0, 0, B0);
 	p.momentum = Vector3d(p0, 0, 0);
 
+	YeeGrid grid(Vector3d(-30), Vector3d(30), Vector3i(15, 20, 12));
+	ConstantField(grid, E, B);
+
 	double dt = M_PI * mc / (abs(p.charge) * B0 * steps) * sqrt(1 + pow(p0 / mc, 2));
 
-	Particle p1 = ParticleMover(E, B).MoveParticle(p, dt, steps);
+	Particle p1 = ParticleMover().MoveParticle(p, dt, steps, grid);
 
 	Vector3d r_theor(0, -2 * p0*c / (p.charge * B0), 0);
 	Vector3d p_theor(-p0, 0, 0);
@@ -233,6 +253,7 @@ int main()
 	cout << "building plots...";
 	BuildPlots();
 	cout << "done.";
+
 	getchar();
 	return 0;
 }

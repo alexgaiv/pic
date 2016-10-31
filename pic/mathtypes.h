@@ -18,6 +18,14 @@ public:
 	Vector3(T x, T y, T z)
 		: x(x), y(y), z(z) { }
 
+	template<class T2>
+	Vector3(const Vector3<T2> &v)
+	{
+		x = (T)v.x;
+		y = (T)v.y;
+		z = (T)v.z;
+	}
+
 	T Length() const;
 	T Square() const;
 	void Normalize();
@@ -30,6 +38,8 @@ public:
 
 	Vector3 operator+(const Vector3 &v) const;
 	Vector3 operator-(const Vector3 &v) const;
+	Vector3 operator*(const Vector3 &v) const;
+	Vector3 operator/(const Vector3 &v) const;
 	Vector3 operator-() const;
 	Vector3 operator*(T scale) const;
 	Vector3 operator/(T scale) const;
@@ -43,6 +53,18 @@ public:
 typedef Vector3<double> Vector3d;
 typedef Vector3<float> Vector3f;
 typedef Vector3<int> Vector3i;
+
+#define OVERLOAD_V(func) \
+template<class T> \
+Vector3<T> func(const Vector3<T> &v) { \
+	return Vector3<T>(func(v.x), func(v.y), func(v.z)); \
+}
+
+OVERLOAD_V(abs)
+OVERLOAD_V(floor)
+OVERLOAD_V(ceil)
+
+#undef OVERLOAD_V
 
 template<class T>
 T Dot(const Vector3<T> &v1, const Vector3<T> &v2) {
@@ -91,6 +113,16 @@ Vector3<T> Vector3<T>::operator+(const Vector3<T> &v) const {
 template<class T>
 Vector3<T> Vector3<T>::operator-(const Vector3<T> &v) const {
 	return Vector3<T>(x - v.x, y - v.y, z - v.z);
+}
+
+template<class T>
+Vector3<T> Vector3<T>::operator*(const Vector3 &v) const {
+	return Vector3<T>(x * v.x, y * v.y, z * v.z);
+}
+
+template<class T>
+Vector3<T> Vector3<T>::operator/(const Vector3 &v) const {
+	return Vector3<T>(x / v.x, y / v.y, z / v.z);
 }
 
 template<class T>

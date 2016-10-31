@@ -75,9 +75,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="grid.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="particle_mover.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="grid.h" />
     <ClInclude Include="mathtypes.h" />
     <ClInclude Include="particle.h" />
     <ClInclude Include="particle_mover.h" />
