@@ -116,12 +116,12 @@ Vector3<T> Vector3<T>::operator-(const Vector3<T> &v) const {
 }
 
 template<class T>
-Vector3<T> Vector3<T>::operator*(const Vector3 &v) const {
+Vector3<T> Vector3<T>::operator*(const Vector3<T> &v) const {
 	return Vector3<T>(x * v.x, y * v.y, z * v.z);
 }
 
 template<class T>
-Vector3<T> Vector3<T>::operator/(const Vector3 &v) const {
+Vector3<T> Vector3<T>::operator/(const Vector3<T> &v) const {
 	return Vector3<T>(x / v.x, y / v.y, z / v.z);
 }
 

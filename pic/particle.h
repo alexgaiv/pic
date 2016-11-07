@@ -14,9 +14,11 @@ public:
 	Vector3d momentum;
 	double mass;
 	double charge;
+	int factor;
 
 	Particle() {
 		mass = charge = 0.0;
+		factor = 1;
 	}
 
 	Vector3d Velocity() const {

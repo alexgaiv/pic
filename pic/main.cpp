@@ -16,6 +16,10 @@ struct ErrorStruct
 	double rel;
 };
 
+bool CmpReal(double a, double b) {
+	return abs(a - b) <= 0.0001;
+}
+
 ostream &operator<<(ostream &os, const Vector3d &v)
 {
 	os << "(" << v.x << ", " << v.y << ", " << v.z << ")";
@@ -33,7 +37,7 @@ void ConstantField(YeeGrid &grid, const Vector3d &E, const Vector3d &B)
 	fill(grid.Bz.GetData().begin(), grid.Bz.GetData().end(), B.z);
 }
 
-void Test1(int steps, ErrorStruct &r_error, ErrorStruct &p_error, bool output = false)
+void TestBoris_1(int steps, ErrorStruct &r_error, ErrorStruct &p_error, bool output = false)
 {
 	Particle p;
 	p.mass = electronMass;
@@ -84,7 +88,7 @@ void Test1(int steps, ErrorStruct &r_error, ErrorStruct &p_error, bool output = 
 	}
 }
 
-void Test2(int steps, ErrorStruct &r_error, ErrorStruct &p_error, bool output = false)
+void TestBoris_2(int steps, ErrorStruct &r_error, ErrorStruct &p_error, bool output = false)
 {
 	Particle p;
 	p.mass = electronMass;
@@ -147,7 +151,7 @@ void BuildPlots()
 	N = startN;
 	for (int i = 0; i < s; i++, N += dN)
 	{
-		Test1(N, r_error, p_error);
+		TestBoris_1(N, r_error, p_error);
 		r_rel_plot[i] = r_error.rel;
 		r_abs_plot[i] = r_error.abs;
 		p_rel_plot[i] = p_error.rel;
@@ -196,7 +200,7 @@ void BuildPlots()
 	N = startN;
 	for (int i = 0; i < s; i++, N += dN)
 	{
-		Test2(N, r_error, p_error);
+		TestBoris_2(N, r_error, p_error);
 		r_rel_plot[i] = r_error.rel;
 		r_abs_plot[i] = r_error.abs;
 		p_rel_plot[i] = p_error.rel;
@@ -242,18 +246,75 @@ void BuildPlots()
 	gr.WriteBMP("plot/test2-2.bmp");
 }
 
-int main()
+void TestBoris()
 {
 	ErrorStruct r_error = { };
 	ErrorStruct p_error = { };
-	
-	Test1(100, r_error, p_error, true);
-	Test2(100, r_error, p_error, true);
+
+	TestBoris_1(100, r_error, p_error, true);
+	TestBoris_2(100, r_error, p_error, true);
 
 	cout << "building plots...";
 	BuildPlots();
 	cout << "done.";
+}
 
+void TestGrid()
+{
+	YeeGrid grid(Vector3d(-10, -20, 15), Vector3d(30, 20, 25), Vector3i(15, 10, 20));
+
+	Vector3d cs = grid.GetCellSize();
+	Vector3d vmin = grid.GetMin();
+	Vector3d vmax = grid.GetMax();
+	Vector3d step = (vmax - vmin) / 10;
+
+	bool passed = true;
+	Vector3i s = grid.Ex.GetSize();
+	for (int i = 0; i < s.x; i++)
+		for (int j = 0; j < s.y; j++)
+			for (int k = 0; k < s.z; k++)
+				grid.Ex(i, j, k) = vmin.x + (i - 0.5) * cs.x;
+
+	for (double x = vmin.x; x <= vmax.x; x += step.x)
+		for (double y = vmin.y; y <= vmax.y; y += step.y)
+			for (double z = vmin.z; z <= vmax.z; z += step.z)
+			{
+				double Ex = grid.Interpolate(Vector3d(x, y, z)).E.x;
+				if (!CmpReal(x, Ex)) {
+					passed = false;
+					goto exit_loop1;
+				}
+			}
+exit_loop1:
+	passed &= CmpReal(vmax.x, grid.Interpolate(vmax).E.x);
+	cout << "grid test (Ex): " << (passed ? "passed" : "failed") << endl;
+
+
+	passed = true;
+	s = grid.Bx.GetSize();
+	for (int i = 0; i < s.x; i++)
+		for (int j = 0; j < s.y; j++)
+			for (int k = 0; k < s.z; k++)
+				grid.Bx(i, j, k) = vmin.x + i*cs.x;
+
+	for (double x = vmin.x; x <= vmax.x; x += step.x)
+		for (double y = vmin.y; y <= vmax.y; y += step.y)
+			for (double z = vmin.z; z <= vmax.z; z += step.z)
+			{
+				double Bx = grid.Interpolate(Vector3d(x, y, z)).B.x;
+				if (!CmpReal(x, Bx)) {
+					passed = false;
+					goto exit_loop2;
+				}
+			}
+exit_loop2:
+	passed &= CmpReal(vmax.x, grid.Interpolate(vmax).B.x);
+	cout << "grid test (Bx): " << (passed ? "passed" : "failed") << endl;
+}
+
+int main()
+{
+	TestGrid();
 	getchar();
 	return 0;
 }

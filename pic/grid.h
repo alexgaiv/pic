@@ -2,6 +2,7 @@
 #define _GRID_H_
 
 #include "mathtypes.h"
+#include "particle.h"
 #include <vector>
 
 struct FieldPoint
@@ -46,12 +47,14 @@ public:
 	Vector3d GetMin() const { return vmin; }
 	Vector3d GetMax() const { return vmax; }
 	Vector3i GetNumCells() const { return numCells; }
+	Vector3d GetCellSize() const { return cellSize; }
 
 	FieldPoint Interpolate(const Vector3d &coords) const;
+	void WeightCurrents(const std::vector<Particle> &particles);
 
 	Lattice Ex, Ey, Ez;
 	Lattice Bx, By, Bz;
-
+	Lattice Jx, Jy, Jz;
 private:
 	Vector3d vmin, vmax;
 	Vector3i numCells;
