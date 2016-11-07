@@ -279,14 +279,14 @@ void TestGrid()
 		for (double y = vmin.y; y <= vmax.y; y += step.y)
 			for (double z = vmin.z; z <= vmax.z; z += step.z)
 			{
-				double Ex = grid.Interpolate(Vector3d(x, y, z)).E.x;
+				double Ex = grid.InterpolateField(Vector3d(x, y, z)).E.x;
 				if (!CmpReal(x, Ex)) {
 					passed = false;
 					goto exit_loop1;
 				}
 			}
 exit_loop1:
-	passed &= CmpReal(vmax.x, grid.Interpolate(vmax).E.x);
+	passed &= CmpReal(vmax.x, grid.InterpolateField(vmax).E.x);
 	cout << "grid test (Ex): " << (passed ? "passed" : "failed") << endl;
 
 
@@ -301,14 +301,14 @@ exit_loop1:
 		for (double y = vmin.y; y <= vmax.y; y += step.y)
 			for (double z = vmin.z; z <= vmax.z; z += step.z)
 			{
-				double Bx = grid.Interpolate(Vector3d(x, y, z)).B.x;
+				double Bx = grid.InterpolateField(Vector3d(x, y, z)).B.x;
 				if (!CmpReal(x, Bx)) {
 					passed = false;
 					goto exit_loop2;
 				}
 			}
 exit_loop2:
-	passed &= CmpReal(vmax.x, grid.Interpolate(vmax).B.x);
+	passed &= CmpReal(vmax.x, grid.InterpolateField(vmax).B.x);
 	cout << "grid test (Bx): " << (passed ? "passed" : "failed") << endl;
 }
 

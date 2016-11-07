@@ -7,22 +7,38 @@ double Lattice::Interpolate(const Vector3i &cell, const Vector3d &coords) const
 	int k3 = k1 + size.x;                                 // (x, y + 1, z)
 	int k4 = k3 + size_xy;                                // (x, y + 1, z + 1)
 
-	double xd = coords.x - cell.x;
-	double yd = coords.y - cell.y;
-	double zd = coords.z - cell.z;
+	Vector3d c = coords - cell;
+	Vector3d c_inv = Vector3d(1.0) - c;
 
-	double xd_inv = 1.0 - xd;
-	double yd_inv = 1.0 - yd;
+	double c00 = data[k1] * c_inv.x + data[k1 + 1] * c.x;
+	double c01 = data[k2] * c_inv.x + data[k2 + 1] * c.x;
+	double c10 = data[k3] * c_inv.x + data[k3 + 1] * c.x;
+	double c11 = data[k4] * c_inv.x + data[k4 + 1] * c.x;
 
-	double c00 = data[k1] * xd_inv + data[k1 + 1] * xd;
-	double c01 = data[k2] * xd_inv + data[k2 + 1] * xd;
-	double c10 = data[k3] * xd_inv + data[k3 + 1] * xd;
-	double c11 = data[k4] * xd_inv + data[k4 + 1] * xd;
+	double c0 = c00 * c_inv.y + c10 * c.y;
+	double c1 = c01 * c_inv.y + c11 * c.y;
 
-	double c0 = c00 * yd_inv + c10 * yd;
-	double c1 = c01 * yd_inv + c11 * yd;
+	return c0 * c_inv.z + c1 * c.z;
+}
 
-	return c0 * (1.0 - zd) + c1 * zd;
+void Lattice::Deposit(const Vector3i &cell, const Vector3d &coords, double value)
+{
+	int k1 = cell.z * size_xy + cell.y * size.x + cell.x; // (x, y, z)
+	int k2 = k1 + size_xy;                                // (x, y, z + 1)
+	int k3 = k1 + size.x;                                 // (x, y + 1, z)
+	int k4 = k3 + size_xy;                                // (x, y + 1, z + 1)
+
+	Vector3d c = coords - cell;
+	Vector3d c_inv = Vector3d(1.0) - c;
+
+	data[k1]     += c_inv.x * c_inv.y * c_inv.z * value;
+	data[k2]     += c_inv.x * c_inv.y * c.z * value;
+	data[k3]     += c_inv.x * c.y * c_inv.z * value;
+	data[k4]     += c_inv.x * c.y * c.z * value;
+	data[k1 + 1] += c.x * c_inv.y * c_inv.z * value;
+	data[k2 + 1] += c.x * c_inv.y * c.z * value;
+	data[k3 + 1] += c.x * c.y * c_inv.z * value;
+	data[k4 + 1] += c.x * c.y * c.z * value;
 }
 
 YeeGrid::YeeGrid(const Vector3d &vmin, const Vector3d &vmax, const Vector3i &numCells) :
@@ -37,10 +53,22 @@ YeeGrid::YeeGrid(const Vector3d &vmin, const Vector3d &vmax, const Vector3i &num
 
 	Bx(numCells + Vector3i(1, 2, 2)),
 	By(numCells + Vector3i(2, 1, 2)),
-	Bz(numCells + Vector3i(2, 2, 1))
+	Bz(numCells + Vector3i(2, 2, 1)),
+
+	Jx(numCells + Vector3i(2, 1, 1)),
+	Jy(numCells + Vector3i(1, 2, 1)),
+	Jz(numCells + Vector3i(1, 1, 2)),
+
+	shift_JEx(0.5, 0, 0),
+	shift_JEy(0, 0.5, 0),
+	shift_JEz(0, 0, 0.5),
+
+	shift_Bx(0, 0.5, 0.5),
+	shift_By(0.5, 0, 0.5),
+	shift_Bz(0.5, 0.5, 0)
 { }
 
-FieldPoint YeeGrid::Interpolate(const Vector3d &coords) const
+FieldPoint YeeGrid::InterpolateField(const Vector3d &coords) const
 {
 	Vector3d pos = (coords - vmin) / cellSize;
 	Vector3i cell = floor(pos);
@@ -66,21 +94,41 @@ FieldPoint YeeGrid::Interpolate(const Vector3d &coords) const
 	FieldPoint f;
 
 	f.E = Vector3d(
-		Ex.Interpolate(cell_Ex, pos + Vector3d(0.5, 0, 0)),
-		Ey.Interpolate(cell_Ey, pos + Vector3d(0, 0.5, 0)),
-		Ez.Interpolate(cell_Ez, pos + Vector3d(0, 0, 0.5))
+		Ex.Interpolate(cell_Ex, pos + shift_JEx),
+		Ey.Interpolate(cell_Ey, pos + shift_JEy),
+		Ez.Interpolate(cell_Ez, pos + shift_JEz)
 	);
 
 	f.B = Vector3d(
-		Bx.Interpolate(cell_Bx, pos + Vector3d(0, 0.5, 0.5)),
-		By.Interpolate(cell_By, pos + Vector3d(0.5, 0, 0.5)),
-		Bz.Interpolate(cell_Bz, pos + Vector3d(0.5, 0.5, 0))
+		Bx.Interpolate(cell_Bx, pos + shift_Bx),
+		By.Interpolate(cell_By, pos + shift_By),
+		Bz.Interpolate(cell_Bz, pos + shift_Bz)
 	);
 
 	return f;
 }
 
-void WeightCurrents(const std::vector<Particle> &particles)
+void YeeGrid::DepositCurrents(const Particle &pt)
 {
+	Vector3d j = pt.factor * pt.charge * pt.Velocity();
 
+	Vector3d pos = (pt.coords - vmin) / cellSize;
+	Vector3i cell = floor(pos);
+	Vector3i cell2 = floor(pos + Vector3d(0.5));
+
+	if (cell.x == numCells.x) cell.x -= 1;
+	if (cell.y == numCells.y) cell.y -= 1;
+	if (cell.z == numCells.z) cell.z -= 1;
+	if (cell2.x == numCells.x) cell2.x -= 1;
+	if (cell2.y == numCells.y) cell2.y -= 1;
+	if (cell2.z == numCells.z) cell2.z -= 1;
+
+	Vector3i cell_Jx(cell), cell_Jy(cell), cell_Jz(cell);
+	cell_Jx.x = cell2.x;
+	cell_Jy.y = cell2.y;
+	cell_Jz.z = cell2.z;
+
+	Jx.Deposit(cell_Jx, pos + shift_JEx, j.x);
+	Jy.Deposit(cell_Jy, pos + shift_JEy, j.y);
+	Jz.Deposit(cell_Jz, pos + shift_JEz, j.z);
 }

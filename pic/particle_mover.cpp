@@ -20,7 +20,7 @@ Particle ParticleMover::MoveParticle(const Particle &particle, double dt, int nu
 	Particle pt = particle;
 	const double mc = pt.mass * c;
 
-	FieldPoint f = grid.Interpolate(pt.coords);
+	FieldPoint f = grid.InterpolateField(pt.coords);
 	E = f.E;
 	B = f.B;
 

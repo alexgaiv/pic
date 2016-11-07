@@ -33,6 +33,7 @@ public:
 	}
 
 	double Interpolate(const Vector3i &cell, const Vector3d &coords) const;
+	void Deposit(const Vector3i &cell, const Vector3d &coords, double value);
 private:
 	std::vector<double> data;
 	Vector3i size;
@@ -49,8 +50,12 @@ public:
 	Vector3i GetNumCells() const { return numCells; }
 	Vector3d GetCellSize() const { return cellSize; }
 
-	FieldPoint Interpolate(const Vector3d &coords) const;
-	void WeightCurrents(const std::vector<Particle> &particles);
+	FieldPoint InterpolateField(const Vector3d &coords) const;
+	void DepositCurrents(const Particle &particle);
+
+	Vector3d
+		shift_JEx, shift_JEy, shift_JEz,
+		shift_Bx, shift_By, shift_Bz;
 
 	Lattice Ex, Ey, Ez;
 	Lattice Bx, By, Bz;
