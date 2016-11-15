@@ -17,11 +17,11 @@ inline Program CreateProgramFromFile(const char *filename, const Context &ctx)
 	vector<string> lines;
 	string line;
 	while (getline(file, line)) {
-		lines.push_back(line);
+		lines.push_back(line + '\n');
 	}
 
 	Program::Sources source;
-	for (int i = 0, n = lines.size(); i < n; i++) {
+	for (int i = 0, n = (int)lines.size(); i < n; i++) {
 		source.push_back(make_pair(lines[i].c_str(), lines[i].size()));
 	}
 

@@ -16,6 +16,17 @@ struct ErrorStruct
 	double rel;
 };
 
+double frand(double min, double max)
+{
+	double f = (double)rand() / RAND_MAX;
+	return min + f * (max - min);
+}
+
+bool inrange(double a, double min, double max)
+{
+	return a >= min && a <= max;
+}
+
 bool CmpReal(double a, double b) {
 	return abs(a - b) <= 0.0001;
 }
@@ -63,7 +74,9 @@ void TestBoris_1(int steps, ErrorStruct &r_error, ErrorStruct &p_error, bool out
 
 			double dt = mc / (p.charge * Ek * steps);
 
-			Particle p1 = ParticleMover().MoveParticle(p, dt, steps, grid);
+			Particle p1;
+			for (int i = 0; i < steps; i++)
+				p1 = ParticleMover().MoveParticle(p, dt, steps, grid);
 
 			Vector3d r_theor;
 			r_theor[i] = mc * c / (p.charge * Ek) * (sqrt(2.0) - 1.0);
@@ -171,7 +184,7 @@ void BuildPlots()
 	y.Set(r_abs_plot, s);
 	gr.Plot(y, "g");
 
-	gr.WriteBMP("plot/test1-1.bmp");
+	gr.WriteBMP("plot/boris/test1-1.bmp");
 	gr.ClearFrame();
 
 	gr.SetSize(1500, 600);
@@ -193,7 +206,7 @@ void BuildPlots()
 	y.Set(p_abs_plot, s);
 	gr.Plot(y, "g");
 
-	gr.WriteBMP("plot/test1-2.bmp");
+	gr.WriteBMP("plot/boris/test1-2.bmp");
 	gr.ClearFrame();
 
 	/*Test 2*/
@@ -225,7 +238,7 @@ void BuildPlots()
 	y.Set(r_abs_plot, s);
 	gr.Plot(y, "g");
 
-	gr.WriteBMP("plot/test2-1.bmp");
+	gr.WriteBMP("plot/boris/test2-1.bmp");
 	gr.ClearFrame();
 
 	gr.SetSize(600, 400);
@@ -243,7 +256,7 @@ void BuildPlots()
 	y.Set(p_abs_plot, s);
 	gr.Plot(y, "g");
 
-	gr.WriteBMP("plot/test2-2.bmp");
+	gr.WriteBMP("plot/boris/test2-2.bmp");
 }
 
 void TestBoris()
@@ -279,8 +292,8 @@ void TestGrid()
 		for (double y = vmin.y; y <= vmax.y; y += step.y)
 			for (double z = vmin.z; z <= vmax.z; z += step.z)
 			{
-				double Ex = grid.InterpolateField(Vector3d(x, y, z)).E.x;
-				if (!CmpReal(x, Ex)) {
+				double val = grid.InterpolateField(Vector3d(x, y, z)).E.x;
+				if (!CmpReal(x, val)) {
 					passed = false;
 					goto exit_loop1;
 				}
@@ -295,14 +308,14 @@ exit_loop1:
 	for (int i = 0; i < s.x; i++)
 		for (int j = 0; j < s.y; j++)
 			for (int k = 0; k < s.z; k++)
-				grid.Bx(i, j, k) = vmin.x + i*cs.x;
+				grid.Bx(i, j, k) = vmin.x + (i - 1) * cs.x;
 
 	for (double x = vmin.x; x <= vmax.x; x += step.x)
 		for (double y = vmin.y; y <= vmax.y; y += step.y)
 			for (double z = vmin.z; z <= vmax.z; z += step.z)
 			{
-				double Bx = grid.InterpolateField(Vector3d(x, y, z)).B.x;
-				if (!CmpReal(x, Bx)) {
+				double val = grid.InterpolateField(Vector3d(x, y, z)).B.x;
+				if (!CmpReal(x, val)) {
 					passed = false;
 					goto exit_loop2;
 				}
@@ -312,9 +325,203 @@ exit_loop2:
 	cout << "grid test (Bx): " << (passed ? "passed" : "failed") << endl;
 }
 
+void TestFdtd()
+{
+	YeeGrid grid(Vector3d(0), Vector3d(2), Vector3i(128, 4, 4));
+
+	Vector3d cs = grid.GetCellSize();
+	Vector3d vmin = grid.GetMin();
+	Vector3d vmax = grid.GetMax();
+	Vector3i s;
+
+	s = grid.Ey.GetSize();
+	for (int i = 0; i < s.x; i++)
+		for (int j = 0; j < s.y; j++)
+			for (int k = 0; k < s.z; k++)
+			{
+				double x = vmin.x + (i - 0.5) * cs.x;
+				grid.Ey(i, j, k) = sin(4 * M_PI * x);
+			}
+
+	s = grid.Bz.GetSize();
+	for (int i = 0; i < s.x; i++)
+		for (int j = 0; j < s.y; j++)
+			for (int k = 0; k < s.z; k++)
+			{
+				double x = vmin.x + (i - 0.5) * cs.x;
+				grid.Bz(i, j, k) = sin(4 * M_PI * x);
+			}
+
+	double dt = grid.GetCellSize().x / (10.0 * c);
+
+	double *ey_plot = new double[grid.Ey.GetSize().x];
+	double *bz_plot = new double[grid.Bz.GetSize().x];
+
+	for (int i = 0; i < 200; i++)
+	{
+		if (i % 20 == 0)
+		{
+			for (int x = 0; x < grid.Ey.GetSize().x; x++)
+				ey_plot[x] = grid.Ey(x, 0, 0);
+			for (int x = 0; x < grid.Bz.GetSize().x; x++)
+				bz_plot[x] = grid.Bz(x, 0, 0);
+
+			mglGraph gr;
+			mglData y;
+
+			gr.SubPlot(2, 1, 0);
+			gr.Title("Ey");
+			gr.SetOrigin(0, 0);
+			gr.SetRanges(0.0, vmax.x, -1, 1);
+			gr.Label('x', "x");
+			gr.Label('y', "Ey");
+			gr.Axis();
+			y.Set(ey_plot, grid.Ey.GetSize().x);
+			gr.Plot(y);
+
+			gr.SubPlot(2, 1, 1);
+			gr.Title("Bz");
+			gr.SetOrigin(0, 0);
+			gr.SetRanges(0.0, vmax.x, -1, 1);
+			gr.Label('x', "x");
+			gr.Label('y', "Bz");
+			gr.Axis();
+			y.Set(bz_plot, grid.Bz.GetSize().x);
+			gr.Plot(y);
+
+			char filename[100];
+			sprintf_s(filename, "plot/fdtd/fdtd-%d.bmp", i / 20 + 1);
+			gr.WriteBMP(filename);
+		}
+
+		grid.SolveField(dt);
+	}
+
+	delete[] ey_plot;
+	delete[] bz_plot;
+}
+
+void ColdPlasmaOscillations()
+{
+	YeeGrid grid(Vector3d(0), Vector3d(1, 0.125, 0.125), Vector3i(64, 8, 8));
+
+	Vector3d cs = grid.GetCellSize();
+	Vector3d vmin = grid.GetMin();
+	Vector3d vmax = grid.GetMax();
+	double cellVolume = cs.x * cs.y * cs.z;
+
+	double A = 1111;
+	double dt = 0.000000000000090453260945929121;
+	int numSteps = 3688;
+	int factor = 2941623;
+
+	Vector3i s = grid.Ex.GetSize();
+	for (int i = 0; i < s.x; i++)
+		for (int j = 0; j < s.y; j++)
+			for (int k = 0; k < s.z; k++)
+			{
+				double x = vmin.x + (i - 0.5) * cs.x;
+				grid.Ex(i, j, k) = A * cos(2 * M_PI * x);
+			}
+
+	vector<Particle> particles;
+
+	s = grid.GetNumCells();
+	for (int i = 0; i < s.x; i++)
+		for (int j = 0; j < s.y; j++)
+			for (int k = 0; k < s.z; k++)
+			{
+				Vector3d min = vmin + Vector3d(i, j, k) * cs;
+				Vector3d max = vmin + Vector3d(i + 1, j + 1, k + 1) * cs;
+
+				double cx = min.x + cs.x*0.5;
+				double f = 23133870163932 * (1 + 0.05 * sin(2 * M_PI * cx));
+				double numParticles = f * cellVolume / factor;
+
+				particles.reserve(numParticles);
+
+				for (int n = 0; n < numParticles; n++)
+				{
+					Particle p;
+					p.charge = electronCharge;
+					p.mass = electronMass;
+					p.factor = factor;
+
+					p.coords = Vector3d(
+						frand(min.x, max.x),
+						frand(min.y, max.y),
+						frand(min.z, max.z));
+
+					particles.push_back(p);
+				}
+			}
+
+	double *ex_plot = new double[grid.Ex.GetSize().x];
+
+	Vector3d center = (vmax + vmin) / 2;
+
+	for (int i = 0; i < numSteps; i++)
+	{
+		cout << i << ' ';
+		for (int k = 0, n = particles.size(); k < n; k++)
+		{
+			Particle &p = particles[k];
+			if (inrange(p.coords.x, vmin.x, vmax.x) &&
+				inrange(p.coords.y, vmin.y, vmax.y) &&
+				inrange(p.coords.z, vmin.z, vmax.z))
+			{
+				grid.DepositCurrents(p);
+			}
+		}
+
+		grid.SolveField(dt);
+
+		for (int k = 0, n = particles.size(); k < n; k++)
+		{
+			Particle &p = particles[k];
+
+			if (inrange(p.coords.x, vmin.x, vmax.x) &&
+				inrange(p.coords.y, vmin.y, vmax.y) &&
+				inrange(p.coords.z, vmin.z, vmax.z))
+			{
+				p = ParticleMover().MoveParticle(p, dt, 1, grid);
+			}
+		}
+
+		if (i % 16 == 0)
+		{
+			for (int x = 0; x < grid.Ex.GetSize().x; x++) {
+				double x2 = vmin.x + (x - 0.5) * cs.x;
+				ex_plot[x] = grid.InterpolateField(Vector3d(x2, center.y, center.z)).E.x;
+			}
+				
+			mglGraph gr;
+			mglData y;
+
+			gr.Title("Ex");
+			gr.SetOrigin(0, 0);
+			gr.SetRanges(0.0, vmax.x, -abs(ex_plot[0]), abs(ex_plot[0]));
+			gr.Label('x', "x");
+			gr.Label('y', "Ex");
+			gr.Axis();
+			y.Set(ex_plot, grid.Ex.GetSize().x);
+			gr.Plot(y);
+
+			char filename[100];
+			sprintf_s(filename, "plot/ColdPlasmaOscillations/ex-%d.bmp", i / 16 + 1);
+			gr.WriteBMP(filename);
+		}
+	}
+
+	delete[] ex_plot;
+}
+
 int main()
 {
-	TestGrid();
+	//TestFdtd();
+	ColdPlasmaOscillations();
+
+	cout << "end";
 	getchar();
 	return 0;
 }

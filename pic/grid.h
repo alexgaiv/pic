@@ -42,8 +42,10 @@ private:
 
 class YeeGrid
 {
+private:
+	Vector3i numCells;
 public:
-	YeeGrid(const Vector3d &vmin, const Vector3d &vmax, const Vector3i &numCells);
+	YeeGrid(const Vector3d &vmin, const Vector3d &vmax, const Vector3i &numInnerCells);
 
 	Vector3d GetMin() const { return vmin; }
 	Vector3d GetMax() const { return vmax; }
@@ -52,6 +54,7 @@ public:
 
 	FieldPoint InterpolateField(const Vector3d &coords) const;
 	void DepositCurrents(const Particle &particle);
+	void SolveField(double dt);
 
 	Vector3d
 		shift_JEx, shift_JEy, shift_JEz,
@@ -62,7 +65,6 @@ public:
 	Lattice Jx, Jy, Jz;
 private:
 	Vector3d vmin, vmax;
-	Vector3i numCells;
 	Vector3d cellSize;
 };
 
