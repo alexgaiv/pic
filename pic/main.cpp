@@ -10,6 +10,8 @@
 
 using namespace std;
 
+#define PRESICION 0.0001;
+
 struct ErrorStruct
 {
 	double abs;
@@ -28,7 +30,7 @@ bool inrange(double a, double min, double max)
 }
 
 bool CmpReal(double a, double b) {
-	return abs(a - b) <= 0.0001;
+	return fabs(a - b) <= PRESICION;
 }
 
 ostream &operator<<(ostream &os, const Vector3d &v)
@@ -55,7 +57,7 @@ void TestBoris_1(int steps, ErrorStruct &r_error, ErrorStruct &p_error, bool out
 	p.charge = electronCharge;
 
 	const double mc = p.mass * c;
-	const double E0 = 43;
+	const double E0 = 43.0;
 
 	int n1 = output ? 3 : 1;
 	int n2 = output ? -1 : 0;
@@ -108,8 +110,8 @@ void TestBoris_2(int steps, ErrorStruct &r_error, ErrorStruct &p_error, bool out
 	p.charge = electronCharge;
 
 	const double mc = p.mass * c;
-	const double p0 = 5;
-	const double B0 = 57;
+	const double p0 = 5.0;
+	const double B0 = 57.0;
 
 	Vector3d E;
 	Vector3d B(0, 0, B0);
@@ -339,8 +341,8 @@ void TestFdtd()
 		for (int j = 0; j < s.y; j++)
 			for (int k = 0; k < s.z; k++)
 			{
-				double x = vmin.x + (i - 0.5) * cs.x;
-				grid.Ey(i, j, k) = sin(4 * M_PI * x);
+				double x = vmin.x + (i - 1) * cs.x;
+				grid.Ey(i, j, k) = sin(4.0 * M_PI * x);
 			}
 
 	s = grid.Bz.GetSize();
@@ -349,22 +351,25 @@ void TestFdtd()
 			for (int k = 0; k < s.z; k++)
 			{
 				double x = vmin.x + (i - 0.5) * cs.x;
-				grid.Bz(i, j, k) = sin(4 * M_PI * x);
+				grid.Bz(i, j, k) = sin(4.0 * M_PI * x);
 			}
 
 	double dt = grid.GetCellSize().x / (10.0 * c);
 
-	double *ey_plot = new double[grid.Ey.GetSize().x];
-	double *bz_plot = new double[grid.Bz.GetSize().x];
+	Vector3i ey_s = grid.Ey.GetSize();
+	Vector3i bz_s = grid.Bz.GetSize();
+
+	double *ey_plot = new double[ey_s.x];
+	double *bz_plot = new double[bz_s.x];
 
 	for (int i = 0; i < 200; i++)
 	{
 		if (i % 20 == 0)
 		{
-			for (int x = 0; x < grid.Ey.GetSize().x; x++)
-				ey_plot[x] = grid.Ey(x, 0, 0);
-			for (int x = 0; x < grid.Bz.GetSize().x; x++)
-				bz_plot[x] = grid.Bz(x, 0, 0);
+			for (int x = 0; x < ey_s.x; x++)
+				ey_plot[x] = grid.Ey(x, ey_s.y / 2, ey_s.z / 2);
+			for (int x = 0; x < bz_s.x; x++)
+				bz_plot[x] = grid.Bz(x, bz_s.y / 2, bz_s.z / 2);
 
 			mglGraph gr;
 			mglData y;
@@ -518,8 +523,8 @@ void ColdPlasmaOscillations()
 
 int main()
 {
-	//TestFdtd();
-	ColdPlasmaOscillations();
+	TestFdtd();
+	//ColdPlasmaOscillations();
 
 	cout << "end";
 	getchar();

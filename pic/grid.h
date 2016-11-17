@@ -66,6 +66,9 @@ public:
 private:
 	Vector3d vmin, vmax;
 	Vector3d cellSize;
+
+	void pbc_E();
+	void pbc_B();
 };
 
 #endif // _GRID_H_

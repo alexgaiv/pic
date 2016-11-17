@@ -130,91 +130,48 @@ void YeeGrid::DepositCurrents(const Particle &pt)
 void YeeGrid::SolveField(double dt)
 {
 	double cdt = c * dt;
-	Vector3d d = Vector3d(1.0) / cellSize;
 	double k = 4 * M_PI * dt;
+	Vector3d d = Vector3d(1.0) / cellSize;
 
 	// Ex
-	for (int i = 0; i < Ex.GetSize().x; i++)
-		for (int j = 0; j < Ex.GetSize().y; j++)
-			for (int k = 0; k < Ex.GetSize().z; k++)
+	for (int i = 1; i < Ex.GetSize().x - 1; i++)
+		for (int j = 1; j < Ex.GetSize().y - 1; j++)
+			for (int k = 1; k < Ex.GetSize().z - 1; k++)
 			{
-				int j1 = j;
-				int j2 = j - 1;
-				int k1 = k;
-				int k2 = k - 1;
-
-				if (j == 0)
-					j2 = Bz.GetSize().y - 1;
-				else if (j == Ex.GetSize().y - 1)
-					j1 = 0;
-
-				if (k == 0)
-					k2 = By.GetSize().z - 1;
-				else if (k == Ex.GetSize().z - 1)
-					k1 = 0;
-
 				Ex(i, j, k) += cdt *
-					((Bz(i, j1, k) - Bz(i, j2, k)) * d.y -
-					(By(i, j, k1) - By(i, j, k2)) * d.z) - 
+					((Bz(i, j, k) - Bz(i, j - 1, k)) * d.y -
+					(By(i, j, k) - By(i, j, k - 1)) * d.z) - 
 					k * Jx(i, j, k);
 			}
 
 	// Ey
-	for (int i = 0; i < Ey.GetSize().x; i++)
-		for (int j = 0; j < Ey.GetSize().y; j++)
-			for (int k = 0; k < Ey.GetSize().z; k++)
+	for (int i = 1; i < Ey.GetSize().x - 1; i++)
+		for (int j = 1; j < Ey.GetSize().y - 1; j++)
+			for (int k = 1; k < Ey.GetSize().z - 1; k++)
 			{
-				int i1 = i;
-				int i2 = i - 1;
-				int k1 = k;
-				int k2 = k - 1;
-
-				if (i == 0)
-					i2 = Bz.GetSize().x - 1;
-				else if (i == Ey.GetSize().x - 1)
-					i1 = 0;
-
-				if (k == 0)
-					k2 = Bx.GetSize().z - 1;
-				else if (k == Ey.GetSize().z - 1)
-					k1 = 0;
-
 				Ey(i, j, k) -= cdt *
-					((Bz(i1, j, k) - Bz(i2, j, k)) * d.x -
-					(Bx(i, j, k1) - Bx(i, j, k2)) * d.z) -
+					((Bz(i, j, k) - Bz(i - 1, j, k)) * d.x -
+					(Bx(i, j, k) - Bx(i, j, k - 1)) * d.z) -
 					k * Jy(i, j, k);
 			}
 
 	// Ez
-	for (int i = 0; i < Ez.GetSize().x; i++)
-		for (int j = 0; j < Ez.GetSize().y; j++)
-			for (int k = 0; k < Ez.GetSize().z; k++)
+	for (int i = 1; i < Ez.GetSize().x - 1; i++)
+		for (int j = 1; j < Ez.GetSize().y - 1; j++)
+			for (int k = 1; k < Ez.GetSize().z - 1; k++)
 			{
-				int i1 = i;
-				int i2 = i - 1;
-				int j1 = j;
-				int j2 = j - 1;
-
-				if (i == 0)
-					i2 = By.GetSize().x - 1;
-				else if (i == Ez.GetSize().x - 1)
-					i1 = 0;
-
-				if (j == 0)
-					j2 = Bx.GetSize().y - 1;
-				else if (k == Ez.GetSize().z - 1)
-					j1 = 0;
-
 				Ez(i, j, k) += cdt *
-					((By(i1, j, k) - By(i2, j, k)) * d.x -
-					(Bx(i, j1, k) - Bx(i, j2, k)) * d.y) -
+					((By(i, j, k) - By(i - 1, j, k)) * d.x -
+					(Bx(i, j, k) - Bx(i, j - 1, k)) * d.y) -
 					k * Jz(i, j, k);
 			}
 
+	pbc_E();
+
 	// Bx
-	for (int i = 0; i < Bx.GetSize().x; i++)
-		for (int j = 0; j < Bx.GetSize().y; j++)
-			for (int k = 0; k < Bx.GetSize().z; k++)
+	for (int i = 1; i < Bx.GetSize().x - 1; i++)
+		for (int j = 1; j < Bx.GetSize().y - 1; j++)
+			for (int k = 1; k < Bx.GetSize().z - 1; k++)
 			{
 				Bx(i, j, k) -= cdt *
 					((Ez(i, j + 1, k) - Ez(i, j, k)) * d.y -
@@ -222,9 +179,9 @@ void YeeGrid::SolveField(double dt)
 			}
 
 	// By
-	for (int i = 0; i < By.GetSize().x; i++)
-		for (int j = 0; j < By.GetSize().y; j++)
-			for (int k = 0; k < By.GetSize().z; k++)
+	for (int i = 1; i < By.GetSize().x - 1; i++)
+		for (int j = 1; j < By.GetSize().y - 1; j++)
+			for (int k = 1; k < By.GetSize().z - 1; k++)
 			{
 				By(i, j, k) += cdt *
 					((Ez(i + 1, j, k) - Ez(i, j, k)) * d.x -
@@ -232,12 +189,135 @@ void YeeGrid::SolveField(double dt)
 			}
 
 	// Bz
-	for (int i = 0; i < Bz.GetSize().x; i++)
-		for (int j = 0; j < Bz.GetSize().y; j++)
-			for (int k = 0; k < Bz.GetSize().z; k++)
+	for (int i = 1; i < Bz.GetSize().x - 1; i++)
+		for (int j = 1; j < Bz.GetSize().y - 1; j++)
+			for (int k = 1; k < Bz.GetSize().z - 1; k++)
 			{
 				Bz(i, j, k) -= cdt *
 					((Ey(i + 1, j, k) - Ey(i, j, k)) * d.x -
 					(Ex(i, j + 1, k) - Ex(i, j, k)) * d.y);
 			}
+
+	pbc_B();
 }
+
+#define BOUNDARY_LOOP(a1, a2, latt) \
+	for (int a1 = 0; a1 < latt.GetSize().a1; a1++) \
+	for (int a2 = 0; a2 < latt.GetSize().a2; a2++)
+
+
+void YeeGrid::pbc_E()
+{
+	// Ex
+	Vector3i s = Ex.GetSize() - Vector3i(1);
+	BOUNDARY_LOOP(x, y, Ex)
+	{
+		Ex(x, y, 0) = Ex(x, y, s.z - 1);
+		Ex(x, y, s.z) = Ex(x, y, 1);
+	}
+	BOUNDARY_LOOP(x, z, Ex)
+	{
+		Ex(x, 0, z) = Ex(x, s.y - 1, z);
+		Ex(x, s.y, z) = Ex(x, 1, z);
+	}
+	BOUNDARY_LOOP(y, z, Ex)
+	{
+		Ex(0, y, z) = Ex(s.x - 1, y, z);
+		Ex(s.x, y, z) = Ex(1, y, z);
+	}
+
+	// Ey
+	s = Ey.GetSize() - Vector3i(1);
+	BOUNDARY_LOOP(x, y, Ey)
+	{
+		Ey(x, y, 0) = Ey(x, y, s.z - 1);
+		Ey(x, y, s.z) = Ey(x, y, 1);
+	}
+	BOUNDARY_LOOP(x, z, Ey)
+	{
+		Ey(x, 0, z) = Ey(x, s.y - 1, z);
+		Ey(x, s.y, z) = Ey(x, 1, z);
+	}
+	BOUNDARY_LOOP(y, z, Ey)
+	{
+		Ey(0, y, z) = Ey(s.x - 1, y, z);
+		Ey(s.x, y, z) = Ey(1, y, z);
+	}
+
+	// Ez
+	s = Ez.GetSize() - Vector3i(1);
+	BOUNDARY_LOOP(x, y, Ez)
+	{
+		Ez(x, y, 0) = Ez(x, y, s.z - 1);
+		Ez(x, y, s.z) = Ez(x, y, 1);
+	}
+	BOUNDARY_LOOP(x, z, Ez)
+	{
+		Ez(x, 0, z) = Ez(x, s.y - 1, z);
+		Ez(x, s.y, z) = Ez(x, 1, z);
+	}
+	BOUNDARY_LOOP(y, z, Ez)
+	{
+		Ez(0, y, z) = Ez(s.x - 1, y, z);
+		Ez(s.x, y, z) = Ez(1, y, z);
+	}
+}
+
+void YeeGrid::pbc_B()
+{
+	// Bx
+	Vector3i s = Bx.GetSize() - Vector3i(1);
+	BOUNDARY_LOOP(x, y, Bx)
+	{
+		Bx(x, y, 0) = Bx(x, y, s.z - 1);
+		Bx(x, y, s.z) = Bx(x, y, 1);
+	}
+	BOUNDARY_LOOP(x, z, Bx)
+	{
+		Bx(x, 0, z) = Bx(x, s.y - 1, z);
+		Bx(x, s.y, z) = Bx(x, 1, z);
+	}
+	BOUNDARY_LOOP(y, z, Bx)
+	{
+		Bx(0, y, z) = Bx(s.x - 1, y, z);
+		Bx(s.x, y, z) = Bx(1, y, z);
+	}
+
+	// By
+	s = By.GetSize() - Vector3i(1);
+	BOUNDARY_LOOP(x, y, By)
+	{
+		By(x, y, 0) = By(x, y, s.z - 1);
+		By(x, y, s.z) = By(x, y, 1);
+	}
+	BOUNDARY_LOOP(x, z, By)
+	{
+		By(x, 0, z) = By(x, s.y - 1, z);
+		By(x, s.y, z) = By(x, 1, z);
+	}
+	BOUNDARY_LOOP(y, z, By)
+	{
+		By(0, y, z) = By(s.x - 1, y, z);
+		By(s.x, y, z) = By(1, y, z);
+	}
+
+	// Bz
+	s = Bz.GetSize() - Vector3i(1);
+	BOUNDARY_LOOP(x, y, Bz)
+	{
+		Bz(x, y, 0) = Bz(x, y, s.z - 1);
+		Bz(x, y, s.z) = Bz(x, y, 1);
+	}
+	BOUNDARY_LOOP(x, z, Bz)
+	{
+		Bz(x, 0, z) = Bz(x, s.y - 1, z);
+		Bz(x, s.y, z) = Bz(x, 1, z);
+	}
+	BOUNDARY_LOOP(y, z, Bz)
+	{
+		Bz(0, y, z) = Bz(s.x - 1, y, z);
+		Bz(s.x, y, z) = Bz(1, y, z);
+	}
+}
+
+#undef BOUNDARY_LOOP
