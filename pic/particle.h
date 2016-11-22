@@ -7,10 +7,6 @@ const double c = 29979245800.0;
 const double electronCharge = -4.80320427e-10;
 const double electronMass = 9.10938215e-28;
 
-inline bool _CmpReal(double a, double b) {
-	return fabs(a - b) <= 0.001;
-}
-
 class Particle
 {
 public:
