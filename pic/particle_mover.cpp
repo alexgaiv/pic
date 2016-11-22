@@ -28,17 +28,17 @@ Particle ParticleMover::MoveParticle(const Particle &particle, double dt, int nu
 	u = pt.momentum / mc;
 	gamma = sqrt(1 + u.Square());
 
-	//for (int i = 0; i < numSteps - 1; i++)
+	for (int i = 0; i < numSteps - 1; i++)
 		iteration(pt, dt);
 
-	/*dt *= 0.5;
+	dt *= 0.5;
 	k = pt.charge * dt / (2 * mc);
 
 	iteration(pt, dt);
 	Vector3d coords = pt.coords;
 	iteration(pt, dt);
 
-	pt.coords = coords;*/
+	pt.coords = coords;
 	pt.momentum = mc * u;
 	return pt;
 }

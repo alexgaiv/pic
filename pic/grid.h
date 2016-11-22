@@ -50,6 +50,7 @@ public:
 	Vector3d GetMin() const { return vmin; }
 	Vector3d GetMax() const { return vmax; }
 	Vector3i GetNumCells() const { return numCells; }
+	Vector3i GetNumInnerCells() const { return numCells - Vector3i(2); }
 	Vector3d GetCellSize() const { return cellSize; }
 
 	FieldPoint InterpolateField(const Vector3d &coords) const;

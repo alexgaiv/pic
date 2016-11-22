@@ -33,6 +33,9 @@ void Lattice::Deposit(const Vector3i &cell, const Vector3d &coords, double value
 	Vector3d c = coords - cell;
 	Vector3d c_inv = Vector3d(1.0) - c;
 
+	//Vector3d c = Vector3d(2.0) - (coords - cell);
+	//Vector3d c_inv = c - Vector3d(1.0);
+
 	data[k1]     += c_inv.x * c_inv.y * c_inv.z * value;
 	data[k2]     += c_inv.x * c_inv.y * c.z * value;
 	data[k3]     += c_inv.x * c.y * c_inv.z * value;
@@ -109,7 +112,8 @@ FieldPoint YeeGrid::InterpolateField(const Vector3d &coords) const
 
 void YeeGrid::DepositCurrents(const Particle &pt)
 {
-	Vector3d j = pt.factor * pt.charge * pt.Velocity();
+	//Vector3d j = pt.factor * pt.charge * pt.Velocity();
+	Vector3d j = pt.charge * pt.Velocity();
 
 	Vector3d pos = (pt.coords - vmin) / cellSize;
 	Vector3i cell = floor(pos);
