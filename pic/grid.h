@@ -32,6 +32,7 @@ public:
 		return data[(k * size.y + j) * size.x + i];
 	}
 
+	void Zeroise() { std::fill(data.begin(), data.end(), 0.0); }
 	double Interpolate(const Vector3i &cell, const Vector3d &coords) const;
 	void Deposit(const Vector3i &cell, const Vector3d &coords, double value);
 private:
@@ -57,6 +58,12 @@ public:
 	void DepositCurrents(const Particle &particle);
 	void SolveField(double dt);
 
+	void ZeroiseJ() {
+		Jx.Zeroise();
+		Jy.Zeroise();
+		Jz.Zeroise();
+	}
+
 	Vector3d
 		shift_JEx, shift_JEy, shift_JEz,
 		shift_Bx, shift_By, shift_Bz;
@@ -64,10 +71,15 @@ public:
 	Lattice Ex, Ey, Ez;
 	Lattice Bx, By, Bz;
 	Lattice Jx, Jy, Jz;
+
+	
+	void pbc_J();
 private:
 	Vector3d vmin, vmax;
 	Vector3d cellSize;
+	double invCellVolume;
 
+	void pbc(Lattice &l);
 	void pbc_E();
 	void pbc_B();
 };

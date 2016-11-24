@@ -25,8 +25,8 @@ void ColdPlasmaOscillations()
 	double A = 1111;
 	double dt = 0.000000000000090453260945929121;
 	int numSteps = 3688;
-	int factor = 2941623;
-	int dumpsPerIter = 1;
+	double factor = 2941623.0;
+	int dumpsPerIter = 16;
 
 	Vector3d cs = grid.GetCellSize();
 	Vector3d vmin = grid.GetMin();
@@ -53,7 +53,7 @@ void ColdPlasmaOscillations()
 				Vector3d hi = lo + cs;
 
 				double cx = lo.x + cs.x*0.5;
-				double f = 23133870163932 * (1 + 0.05 * sin(2 * M_PI * cx));
+				double f = 23133870163932 * (1.0 + 0.05 * sin(2 * M_PI * cx));
 				double numParticles = f * cellVolume / factor;
 
 				particles.reserve((unsigned)numParticles);
@@ -80,6 +80,9 @@ void ColdPlasmaOscillations()
 	for (int i = 0; i < numSteps; i++)
 	{
 		cout << i << ' ';
+
+		grid.ZeroiseJ();
+
 		for (int k = 0, n = particles.size(); k < n; k++)
 		{
 			Particle &p = particles[k];
@@ -90,6 +93,8 @@ void ColdPlasmaOscillations()
 				grid.DepositCurrents(p);
 			}
 		}
+
+		//grid.pbc_J();
 
 		grid.SolveField(dt);
 
@@ -117,7 +122,6 @@ void ColdPlasmaOscillations()
 
 			gr.Title("Ex");
 			gr.SetOrigin(0, 0);
-			//gr.SetRanges(0.0, vmax.x, -abs(ex_plot[0]), abs(ex_plot[0]));
 			gr.SetRanges(0.0, vmax.x, -A, A);
 			gr.Label('x', "x");
 			gr.Label('y', "Ex");
@@ -137,6 +141,7 @@ void ColdPlasmaOscillations()
 int main()
 {
 	ColdPlasmaOscillations();
+	//TestFdtd();
 
 	getchar();
 	return 0;

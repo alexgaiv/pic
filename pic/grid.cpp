@@ -25,22 +25,38 @@ double Lattice::Interpolate(const Vector3i &cell, const Vector3d &coords) const
 
 void Lattice::Deposit(const Vector3i &cell, const Vector3d &coords, double value)
 {
-	int k1 = cell.z * size_xy + cell.y * size.x + cell.x; // (x, y, z)
-	int k2 = k1 + size_xy;                                // (x, y, z + 1)
-	int k3 = k1 + size.x;                                 // (x, y + 1, z)
-	int k4 = k3 + size_xy;                                // (x, y + 1, z + 1)
+	//int k1 = cell.z * size_xy + cell.y * size.x + cell.x; // (x, y, z)
+	//int k2 = k1 + size_xy;                                // (x, y, z + 1)
+	//int k3 = k1 + size.x;                                 // (x, y + 1, z)
+	//int k4 = k3 + size_xy;                                // (x, y + 1, z + 1)
 
 	Vector3d c = coords - cell;
 	Vector3d c_inv = Vector3d(1.0) - c;
 
-	data[k1]     += c_inv.x * c_inv.y * c_inv.z * value;
+	Lattice &t = *this;
+	int i = cell.x, j = cell.y, k = cell.z;
+	
+	t(i, j, k) += c_inv.x * c_inv.y * c_inv.z * value;
+	t(i, j, k+1) += c_inv.x * c_inv.y * c.z * value;
+	t(i, j+1, k) += c_inv.x * c.y * c_inv.z * value;
+	t(i, j+1, k+1) += c_inv.x * c.y * c.z * value;
+	t(i+1, j, k) += c.x * c_inv.y * c_inv.z * value;
+	t(i+1, j, k+1) += c.x * c_inv.y * c.z * value;
+	t(i+1, j+1, k) += c.x * c.y * c_inv.z * value;
+	t(i+1, j+1, k+1) += c.x * c.y * c.z * value;
+
+
+	
+
+
+	/*data[k1]     += c_inv.x * c_inv.y * c_inv.z * value;
 	data[k2]     += c_inv.x * c_inv.y * c.z * value;
 	data[k3]     += c_inv.x * c.y * c_inv.z * value;
 	data[k4]     += c_inv.x * c.y * c.z * value;
 	data[k1 + 1] += c.x * c_inv.y * c_inv.z * value;
 	data[k2 + 1] += c.x * c_inv.y * c.z * value;
 	data[k3 + 1] += c.x * c.y * c_inv.z * value;
-	data[k4 + 1] += c.x * c.y * c.z * value;
+	data[k4 + 1] += c.x * c.y * c.z * value;*/
 }
 
 YeeGrid::YeeGrid(const Vector3d &vmin, const Vector3d &vmax, const Vector3i &numInnerCells) :
@@ -48,6 +64,7 @@ YeeGrid::YeeGrid(const Vector3d &vmin, const Vector3d &vmax, const Vector3i &num
 	vmax(vmax),
 	numCells(numInnerCells + Vector3i(2)),
 	cellSize((vmax - vmin) / numInnerCells),
+	invCellVolume(1.0 / (cellSize.x * cellSize.y * cellSize.z)),
 
 	Ex(numCells + Vector3i(0, 1, 1)),
 	Ey(numCells + Vector3i(1, 0, 1)),
@@ -109,8 +126,7 @@ FieldPoint YeeGrid::InterpolateField(const Vector3d &coords) const
 
 void YeeGrid::DepositCurrents(const Particle &pt)
 {
-	//Vector3d j = pt.factor * pt.charge * pt.Velocity();
-	Vector3d j = pt.charge * pt.Velocity();
+	Vector3d j = pt.factor * pt.charge * pt.Velocity() * invCellVolume;
 
 	Vector3d pos = (pt.coords - vmin) / cellSize;
 	Vector3i cell = floor(pos);
@@ -131,7 +147,7 @@ void YeeGrid::DepositCurrents(const Particle &pt)
 void YeeGrid::SolveField(double dt)
 {
 	double cdt = c * dt;
-	double k = 4 * M_PI * dt;
+	double kj = 4 * M_PI * dt;
 	Vector3d d = Vector3d(1.0) / cellSize;
 
 	// Ex
@@ -142,7 +158,7 @@ void YeeGrid::SolveField(double dt)
 				Ex(i, j, k) += cdt *
 					((Bz(i, j, k) - Bz(i, j - 1, k)) * d.y -
 					(By(i, j, k) - By(i, j, k - 1)) * d.z) - 
-					k * Jx(i, j, k);
+					kj * Jx(i, j, k);
 			}
 
 	// Ey
@@ -153,7 +169,7 @@ void YeeGrid::SolveField(double dt)
 				Ey(i, j, k) -= cdt *
 					((Bz(i, j, k) - Bz(i - 1, j, k)) * d.x -
 					(Bx(i, j, k) - Bx(i, j, k - 1)) * d.z) -
-					k * Jy(i, j, k);
+					kj * Jy(i, j, k);
 			}
 
 	// Ez
@@ -164,7 +180,7 @@ void YeeGrid::SolveField(double dt)
 				Ez(i, j, k) += cdt *
 					((By(i, j, k) - By(i - 1, j, k)) * d.x -
 					(Bx(i, j, k) - Bx(i, j - 1, k)) * d.y) -
-					k * Jz(i, j, k);
+					kj * Jz(i, j, k);
 			}
 
 	pbc_E();
@@ -206,119 +222,45 @@ void YeeGrid::SolveField(double dt)
 	for (int a1 = 0; a1 < latt.GetSize().a1; a1++) \
 	for (int a2 = 0; a2 < latt.GetSize().a2; a2++)
 
-
-void YeeGrid::pbc_E()
+void YeeGrid::pbc(Lattice &l)
 {
-	// Ex
-	Vector3i s = Ex.GetSize() - Vector3i(1);
-	BOUNDARY_LOOP(x, y, Ex)
+	Vector3i s = l.GetSize() - Vector3i(1);
+	BOUNDARY_LOOP(x, y, l)
 	{
-		Ex(x, y, 0) = Ex(x, y, s.z - 1);
-		Ex(x, y, s.z) = Ex(x, y, 1);
+		l(x, y, 0) = l(x, y, s.z - 1);
+		l(x, y, s.z) = l(x, y, 1);
 	}
-	BOUNDARY_LOOP(x, z, Ex)
+	BOUNDARY_LOOP(x, z, l)
 	{
-		Ex(x, 0, z) = Ex(x, s.y - 1, z);
-		Ex(x, s.y, z) = Ex(x, 1, z);
+		l(x, 0, z) = l(x, s.y - 1, z);
+		l(x, s.y, z) = l(x, 1, z);
 	}
-	BOUNDARY_LOOP(y, z, Ex)
+	BOUNDARY_LOOP(y, z, l)
 	{
-		Ex(0, y, z) = Ex(s.x - 1, y, z);
-		Ex(s.x, y, z) = Ex(1, y, z);
-	}
-
-	// Ey
-	s = Ey.GetSize() - Vector3i(1);
-	BOUNDARY_LOOP(x, y, Ey)
-	{
-		Ey(x, y, 0) = Ey(x, y, s.z - 1);
-		Ey(x, y, s.z) = Ey(x, y, 1);
-	}
-	BOUNDARY_LOOP(x, z, Ey)
-	{
-		Ey(x, 0, z) = Ey(x, s.y - 1, z);
-		Ey(x, s.y, z) = Ey(x, 1, z);
-	}
-	BOUNDARY_LOOP(y, z, Ey)
-	{
-		Ey(0, y, z) = Ey(s.x - 1, y, z);
-		Ey(s.x, y, z) = Ey(1, y, z);
-	}
-
-	// Ez
-	s = Ez.GetSize() - Vector3i(1);
-	BOUNDARY_LOOP(x, y, Ez)
-	{
-		Ez(x, y, 0) = Ez(x, y, s.z - 1);
-		Ez(x, y, s.z) = Ez(x, y, 1);
-	}
-	BOUNDARY_LOOP(x, z, Ez)
-	{
-		Ez(x, 0, z) = Ez(x, s.y - 1, z);
-		Ez(x, s.y, z) = Ez(x, 1, z);
-	}
-	BOUNDARY_LOOP(y, z, Ez)
-	{
-		Ez(0, y, z) = Ez(s.x - 1, y, z);
-		Ez(s.x, y, z) = Ez(1, y, z);
-	}
-}
-
-void YeeGrid::pbc_B()
-{
-	// Bx
-	Vector3i s = Bx.GetSize() - Vector3i(1);
-	BOUNDARY_LOOP(x, y, Bx)
-	{
-		Bx(x, y, 0) = Bx(x, y, s.z - 1);
-		Bx(x, y, s.z) = Bx(x, y, 1);
-	}
-	BOUNDARY_LOOP(x, z, Bx)
-	{
-		Bx(x, 0, z) = Bx(x, s.y - 1, z);
-		Bx(x, s.y, z) = Bx(x, 1, z);
-	}
-	BOUNDARY_LOOP(y, z, Bx)
-	{
-		Bx(0, y, z) = Bx(s.x - 1, y, z);
-		Bx(s.x, y, z) = Bx(1, y, z);
-	}
-
-	// By
-	s = By.GetSize() - Vector3i(1);
-	BOUNDARY_LOOP(x, y, By)
-	{
-		By(x, y, 0) = By(x, y, s.z - 1);
-		By(x, y, s.z) = By(x, y, 1);
-	}
-	BOUNDARY_LOOP(x, z, By)
-	{
-		By(x, 0, z) = By(x, s.y - 1, z);
-		By(x, s.y, z) = By(x, 1, z);
-	}
-	BOUNDARY_LOOP(y, z, By)
-	{
-		By(0, y, z) = By(s.x - 1, y, z);
-		By(s.x, y, z) = By(1, y, z);
-	}
-
-	// Bz
-	s = Bz.GetSize() - Vector3i(1);
-	BOUNDARY_LOOP(x, y, Bz)
-	{
-		Bz(x, y, 0) = Bz(x, y, s.z - 1);
-		Bz(x, y, s.z) = Bz(x, y, 1);
-	}
-	BOUNDARY_LOOP(x, z, Bz)
-	{
-		Bz(x, 0, z) = Bz(x, s.y - 1, z);
-		Bz(x, s.y, z) = Bz(x, 1, z);
-	}
-	BOUNDARY_LOOP(y, z, Bz)
-	{
-		Bz(0, y, z) = Bz(s.x - 1, y, z);
-		Bz(s.x, y, z) = Bz(1, y, z);
+		l(0, y, z) = l(s.x - 1, y, z);
+		l(s.x, y, z) = l(1, y, z);
 	}
 }
 
 #undef BOUNDARY_LOOP
+
+void YeeGrid::pbc_J()
+{
+	pbc(Jx);
+	pbc(Jy);
+	pbc(Jz);
+}
+
+void YeeGrid::pbc_E()
+{
+	pbc(Ex);
+	pbc(Ey);
+	pbc(Ez);
+}
+
+void YeeGrid::pbc_B()
+{
+	pbc(Bx);
+	pbc(By);
+	pbc(Bz);
+}

@@ -1,3 +1,10 @@
+#include "mgl_suppress_warnings.h"
+#include <iostream>
+#include <math.h>
+#include <mgl2\mgl.h>
+#include "utils.h"
+#include "particle_mover.h"
+#include "grid.h"
 #include "tests.h"
 
 using namespace std;
@@ -82,7 +89,7 @@ CoordsMomentumError TestBoris_1(int steps, bool verbose = true)
 				cout << "r_error_rel = " << r_error.rel << ", p_error_rel = " << p_error.rel << "\n\n";
 			}
 		} // end of direction loop
-	} // end if axis loop
+	} // end of axis loop
 
 	return err;
 }
