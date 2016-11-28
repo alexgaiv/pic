@@ -13,25 +13,25 @@
 
 using namespace std;
 
-inline bool inrange(double a, double min, double max)
-{
-	return a >= min && a <= max;
-}
-
 void ColdPlasmaOscillations()
 {
 	YeeGrid grid(Vector3d(0), Vector3d(1, 0.125, 0.125), Vector3i(64, 8, 8));
 
-	double A = 1111;
-	double dt = 0.000000000000090453260945929121;
-	int numSteps = 3688;
-	double factor = 2941623.0;
-	int dumpsPerIter = 16;
+	const double A = 1111.1670395302758;
+	const double dt = 9.045326094592912e-14;//0.000000000000090453260945929121;
+	const int numSteps = 3688;
+	const double factor = 2941623.7085892726;
+	const int dumpsPerIter = 16;
 
 	Vector3d cs = grid.GetCellSize();
 	Vector3d vmin = grid.GetMin();
 	Vector3d vmax = grid.GetMax();
+	Vector3d size = vmax - vmin;
+	Vector3d center = (vmin + vmax) / 2;
 	double cellVolume = cs.x * cs.y * cs.z;
+
+	double *ex_plot = new double[grid.Ex.GetSize().x];
+	vector<Particle> particles;
 
 	Vector3i s = grid.Ex.GetSize();
 	for (int i = 0; i < s.x; i++)
@@ -42,8 +42,6 @@ void ColdPlasmaOscillations()
 				grid.Ex(i, j, k) = A * cos(2 * M_PI * x);
 			}
 
-	vector<Particle> particles;
-
 	s = grid.GetNumInnerCells();
 	for (int i = 0; i < s.x; i++)
 		for (int j = 0; j < s.y; j++)
@@ -53,7 +51,7 @@ void ColdPlasmaOscillations()
 				Vector3d hi = lo + cs;
 
 				double cx = lo.x + cs.x*0.5;
-				double f = 23133870163932 * (1.0 + 0.05 * sin(2 * M_PI * cx));
+				double f = 23133870163932.79 * (1.0 + 0.05 * sin(2 * M_PI * cx));
 				double numParticles = f * cellVolume / factor;
 
 				particles.reserve((unsigned)numParticles);
@@ -73,48 +71,51 @@ void ColdPlasmaOscillations()
 					particles.push_back(p);
 				}
 			}
-
-	double *ex_plot = new double[grid.Ex.GetSize().x];
-	Vector3d center = (vmax + vmin) / 2;
-
-	for (int i = 0; i < numSteps; i++)
+	
+	for (int step = 0; step < numSteps; step++)
 	{
-		cout << i << ' ';
+		cout << step << ' ';
 
 		grid.ZeroiseJ();
 
-		for (int k = 0, n = particles.size(); k < n; k++)
+		for (int i = 0, n = particles.size(); i < n; i++)
 		{
-			Particle &p = particles[k];
-			if (inrange(p.coords.x, vmin.x, vmax.x) &&
-				inrange(p.coords.y, vmin.y, vmax.y) &&
-				inrange(p.coords.z, vmin.z, vmax.z))
-			{
-				grid.DepositCurrents(p);
-			}
+			Particle &p = particles[i];
+
+			if (p.coords.x < vmin.x) p.coords.x += size.x;
+			else if (p.coords.x > vmax.x) p.coords.x -= size.x;
+			if (p.coords.y < vmin.y) p.coords.y += size.y;
+			else if (p.coords.y > vmax.y) p.coords.y -= size.y;
+			if (p.coords.z < vmin.z) p.coords.z += size.z;
+			else if (p.coords.z > vmax.z) p.coords.z -= size.z;
+
+			grid.DepositCurrents(p);
 		}
 
-		//grid.pbc_J();
+		grid.pbc_J();
 
 		grid.SolveField(dt);
 
-		for (int k = 0, n = particles.size(); k < n; k++)
+		for (int i = 0, n = particles.size(); i < n; i++)
 		{
-			Particle &p = particles[k];
+			Particle &p = particles[i];
 
-			if (inrange(p.coords.x, vmin.x, vmax.x) &&
-				inrange(p.coords.y, vmin.y, vmax.y) &&
-				inrange(p.coords.z, vmin.z, vmax.z))
-			{
-				p = ParticleMover().MoveParticle(p, dt, 1, grid);
-			}
+			if (p.coords.x < vmin.x) p.coords.x += size.x;
+			else if (p.coords.x > vmax.x) p.coords.x -= size.x;
+			if (p.coords.y < vmin.y) p.coords.y += size.y;
+			else if (p.coords.y > vmax.y) p.coords.y -= size.y;
+			if (p.coords.z < vmin.z) p.coords.z += size.z;
+			else if (p.coords.z > vmax.z) p.coords.z -= size.z;
+
+			p = ParticleMover().MoveParticle(p, dt, 1, grid);
 		}
 
-		if (i % dumpsPerIter == 0)
+		if (step % dumpsPerIter == 0)
 		{
-			for (int x = 0; x < grid.Ex.GetSize().x; x++) {
-				double x2 = vmin.x + (x - 0.5) * cs.x;
-				ex_plot[x] = grid.InterpolateField(Vector3d(x2, center.y, center.z)).E.x;
+			for (int ix = 0; ix < grid.Ex.GetSize().x; ix++) {
+				double x = vmin.x + (ix - 0.5) * cs.x;
+				Vector3i s = grid.Ex.GetSize();
+				ex_plot[ix] = grid.InterpolateField(Vector3d(x, center.y, center.z)).E.x;
 			}
 				
 			mglGraph gr;
@@ -130,7 +131,7 @@ void ColdPlasmaOscillations()
 			gr.Plot(y);
 
 			char filename[100];
-			sprintf_s(filename, "plot/ColdPlasmaOscillations/ex-%d.bmp", i / dumpsPerIter + 1);
+			sprintf_s(filename, "plot/ColdPlasmaOscillations/ex-%d.bmp", step / dumpsPerIter + 1);
 			gr.WriteBMP(filename);
 		}
 	}
@@ -141,7 +142,6 @@ void ColdPlasmaOscillations()
 int main()
 {
 	ColdPlasmaOscillations();
-	//TestFdtd();
 
 	getchar();
 	return 0;

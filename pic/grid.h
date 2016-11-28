@@ -72,7 +72,6 @@ public:
 	Lattice Bx, By, Bz;
 	Lattice Jx, Jy, Jz;
 
-	
 	void pbc_J();
 private:
 	Vector3d vmin, vmax;
@@ -80,6 +79,7 @@ private:
 	double invCellVolume;
 
 	void pbc(Lattice &l);
+	void pbc2(Lattice &l);
 	void pbc_E();
 	void pbc_B();
 };

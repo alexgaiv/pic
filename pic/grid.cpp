@@ -35,19 +35,16 @@ void Lattice::Deposit(const Vector3i &cell, const Vector3d &coords, double value
 
 	Lattice &t = *this;
 	int i = cell.x, j = cell.y, k = cell.z;
-	
+
 	t(i, j, k) += c_inv.x * c_inv.y * c_inv.z * value;
-	t(i, j, k+1) += c_inv.x * c_inv.y * c.z * value;
-	t(i, j+1, k) += c_inv.x * c.y * c_inv.z * value;
-	t(i, j+1, k+1) += c_inv.x * c.y * c.z * value;
-	t(i+1, j, k) += c.x * c_inv.y * c_inv.z * value;
-	t(i+1, j, k+1) += c.x * c_inv.y * c.z * value;
-	t(i+1, j+1, k) += c.x * c.y * c_inv.z * value;
-	t(i+1, j+1, k+1) += c.x * c.y * c.z * value;
-
-
+	t(i, j, k + 1) += c_inv.x * c_inv.y * c.z * value;
+	t(i, j + 1, k) += c_inv.x * c.y * c_inv.z * value;
+	t(i, j + 1, k + 1) += c_inv.x * c.y * c.z * value;
+	t(i + 1, j, k) += c.x * c_inv.y * c_inv.z * value;
+	t(i + 1, j, k + 1) += c.x * c_inv.y * c.z * value;
+	t(i + 1, j + 1, k) += c.x * c.y * c_inv.z * value;
+	t(i + 1, j + 1, k + 1) += c.x * c.y * c.z * value;
 	
-
 
 	/*data[k1]     += c_inv.x * c_inv.y * c_inv.z * value;
 	data[k2]     += c_inv.x * c_inv.y * c.z * value;
@@ -242,14 +239,66 @@ void YeeGrid::pbc(Lattice &l)
 	}
 }
 
-#undef BOUNDARY_LOOP
-
 void YeeGrid::pbc_J()
 {
-	pbc(Jx);
-	pbc(Jy);
-	pbc(Jz);
+	// Jx
+	Vector3i s = Jx.GetSize() - Vector3i(1);
+	BOUNDARY_LOOP(x, y, Jx)
+	{
+		double a = Jx(x, y, 1) + Jx(x, y, s.z - 1);
+		Jx(x, y, 1) = Jx(x, y, s.z - 1) = a;
+	}
+	BOUNDARY_LOOP(x, z, Jx)
+	{
+		double a = Jx(x, 1, z) + Jx(x, s.y - 1, z);
+		Jx(x, 1, z) = Jx(x, s.y - 1, z) = a;
+	}
+	BOUNDARY_LOOP(y, z, Jx)
+	{
+		Jx(1, y, z) += Jx(s.x, y, z);
+		Jx(s.x - 1, y, z) += Jx(0, y, z);
+	}
+
+	// Jy
+	s = Jy.GetSize() - Vector3i(1);
+	BOUNDARY_LOOP(x, y, Jy)
+	{
+		double a = Jy(x, y, 1) + Jy(x, y, s.z - 1);
+		Jy(x, y, 1) = Jy(x, y, s.z - 1) = a;
+	}
+	BOUNDARY_LOOP(x, z, Jy)
+	{
+		Jy(x, 1, z) += Jy(x, s.y, z);
+		Jy(x, s.y - 1, z) += Jy(x, 0, z);
+	}
+	BOUNDARY_LOOP(y, z, Jy)
+	{
+		double a = Jy(1, y, z) + Jy(s.x - 1, y, z);
+		Jy(1, y, z) = Jy(s.x - 1, y, z) = a;
+	}
+
+	// Jz
+	s = Jz.GetSize() - Vector3i(1);
+	BOUNDARY_LOOP(x, y, Jz)
+	{
+		Jz(x, y, 1) += Jz(x, y, s.z);
+		Jz(x, y, s.z - 1) += Jz(x, y, 0);
+	}
+	BOUNDARY_LOOP(x, z, Jz)
+	{
+		double a = Jz(x, 1, z) + Jz(x, s.y - 1, z);
+		Jz(x, 1, z) = Jz(x, s.y - 1, z) = a;
+	}
+	BOUNDARY_LOOP(y, z, Jz)
+	{
+		double a = Jz(1, y, z) + Jz(s.x - 1, y, z);
+		Jz(1, y, z) = Jz(s.x - 1, y, z) = a;
+	}
+
 }
+
+#undef BOUNDARY_LOOP
+
 
 void YeeGrid::pbc_E()
 {
