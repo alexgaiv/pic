@@ -17,10 +17,10 @@ void ColdPlasmaOscillations()
 {
 	YeeGrid grid(Vector3d(0), Vector3d(1, 0.125, 0.125), Vector3i(64, 8, 8));
 
-	const double A = 1111.1670395302758;
-	const double dt = 9.045326094592912e-14;//0.000000000000090453260945929121;
+	const double A = 1111;
+	const double dt = 0.000000000000090453260945929121;
 	const int numSteps = 3688;
-	const double factor = 2941623.7085892726;
+	const double factor = 2941623;
 	const int dumpsPerIter = 16;
 
 	Vector3d cs = grid.GetCellSize();
@@ -51,7 +51,7 @@ void ColdPlasmaOscillations()
 				Vector3d hi = lo + cs;
 
 				double cx = lo.x + cs.x*0.5;
-				double f = 23133870163932.79 * (1.0 + 0.05 * sin(2 * M_PI * cx));
+				double f = 23133870163932 * (1.0 + 0.05 * sin(2 * M_PI * cx));
 				double numParticles = f * cellVolume / factor;
 
 				particles.reserve((unsigned)numParticles);

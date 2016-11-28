@@ -79,7 +79,6 @@ private:
 	double invCellVolume;
 
 	void pbc(Lattice &l);
-	void pbc2(Lattice &l);
 	void pbc_E();
 	void pbc_B();
 };
