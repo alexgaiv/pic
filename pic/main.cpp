@@ -31,6 +31,10 @@ void ColdPlasmaOscillations()
 	double cellVolume = cs.x * cs.y * cs.z;
 
 	double *ex_plot = new double[grid.Ex.GetSize().x];
+	double **ex_dens = new double*[grid.Ex.GetSize().x];
+	for (int i = 0; i < grid.Ex.GetSize().x; i++)
+		ex_dens[i] = new double[grid.Ex.GetSize().y];
+
 	vector<Particle> particles;
 
 	Vector3i s = grid.Ex.GetSize();
@@ -112,23 +116,43 @@ void ColdPlasmaOscillations()
 
 		if (step % dumpsPerIter == 0)
 		{
+			mglGraph gr;
+			mglData y;
+
 			for (int ix = 0; ix < grid.Ex.GetSize().x; ix++) {
 				double x = vmin.x + (ix - 0.5) * cs.x;
 				Vector3i s = grid.Ex.GetSize();
 				ex_plot[ix] = grid.InterpolateField(Vector3d(x, center.y, center.z)).E.x;
 			}
-				
-			mglGraph gr;
-			mglData y;
 
-			gr.Title("Ex");
+			for (int ix = 0; ix < grid.Ex.GetSize().x; ix++) {
+				for (int iy = 0; iy < grid.Ex.GetSize().y; iy++) {
+					double x = vmin.x + (ix - 0.5) * cs.x;
+					double y = vmin.y + (iy - 1.0) * cs.y;
+					ex_dens[ix][iy] = grid.InterpolateField(Vector3d(x, y, center.z)).E.x;
+				}
+			}
+			
+			gr.SetSize(1000, 401);
+			gr.SubPlot(2, 1, 0);
 			gr.SetOrigin(0, 0);
-			gr.SetRanges(0.0, vmax.x, -A, A);
+			gr.SetRanges(vmin.x, vmax.x, -A, A);
 			gr.Label('x', "x");
-			gr.Label('y', "Ex");
+			gr.Label('y', "E_x");
 			gr.Axis();
 			y.Set(ex_plot, grid.Ex.GetSize().x);
 			gr.Plot(y);
+
+			gr.SubPlot(2, 1, 1);
+			gr.SetOrigin(0, 0);
+			gr.SetRanges(vmin.x, vmax.x, vmin.y, vmax.y, -A, A);
+			gr.Label('x', "x");
+			gr.Label('y', "y");
+			gr.Axis();
+			gr.Box();
+			gr.Colorbar();
+			y.Set(ex_dens, grid.Ex.GetSize().x, grid.Ex.GetSize().y);
+			gr.Dens(y);
 
 			char filename[100];
 			sprintf_s(filename, "plot/ColdPlasmaOscillations/ex-%d.bmp", step / dumpsPerIter + 1);
@@ -137,6 +161,9 @@ void ColdPlasmaOscillations()
 	}
 
 	delete[] ex_plot;
+	for (int i = 0; i < grid.Ex.GetSize().x; i++)
+		delete[] ex_dens[i];
+	delete[] ex_dens;
 }
 
 int main()
