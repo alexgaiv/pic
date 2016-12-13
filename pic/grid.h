@@ -1,9 +1,10 @@
 #ifndef _GRID_H_
 #define _GRID_H_
 
+#include <vector>
 #include "mathtypes.h"
 #include "particle.h"
-#include <vector>
+#include "ensemble.h"
 
 struct FieldPoint
 {
@@ -72,7 +73,7 @@ public:
 	Lattice Bx, By, Bz;
 	Lattice Jx, Jy, Jz;
 
-	void pbc_J();
+	void PbcJ();
 private:
 	Vector3d vmin, vmax;
 	Vector3d cellSize;

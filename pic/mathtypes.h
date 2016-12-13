@@ -57,13 +57,13 @@ typedef Vector3<int> Vector3i;
 #define OVERLOAD_V1(func) \
 template<class T> \
 Vector3<T> func(const Vector3<T> &v) { \
-	return Vector3<T>(func(v.x), func(v.y), func(v.z)); \
+	return Vector3<T>((T)func(v.x), (T)func(v.y), (T)func(v.z)); \
 }
 
 #define OVERLOAD_V2(func) \
 template<class T> \
 Vector3<T> func(const Vector3<T> &v1, const Vector3<T> &v2) { \
-	return Vector3<T>(func(v1.x, v2.x), func(v1.y, v2.y), func(v1.z, v2.z)); \
+	return Vector3<T>((T)func(v1.x, v2.x), (T)func(v1.y, v2.y), (T)func(v1.z, v2.z)); \
 }
 
 OVERLOAD_V1(abs)
@@ -71,6 +71,7 @@ OVERLOAD_V1(floor)
 OVERLOAD_V1(ceil)
 OVERLOAD_V2(min)
 OVERLOAD_V2(max)
+OVERLOAD_V2(fmod)
 
 #undef OVERLOAD_V1
 #undef OVERLOAD_V2

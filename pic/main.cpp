@@ -7,8 +7,10 @@
 #include <math.h>
 #include <mgl2\mgl.h>
 #include "utils.h"
+#include "array3D.h"
 #include "particle_mover.h"
 #include "grid.h"
+#include "ensemble.h"
 #include "tests.h"
 
 using namespace std;
@@ -23,6 +25,7 @@ void ColdPlasmaOscillations()
 	const double factor = 2941623;
 	const int dumpsPerIter = 16;
 
+	Vector3i numCells = grid.GetNumInnerCells();
 	Vector3d cs = grid.GetCellSize();
 	Vector3d vmin = grid.GetMin();
 	Vector3d vmax = grid.GetMax();
@@ -30,51 +33,65 @@ void ColdPlasmaOscillations()
 	Vector3d center = (vmin + vmax) / 2;
 	double cellVolume = cs.x * cs.y * cs.z;
 
+	const Vector3i es(3, 3, 3);
+	Array3D<Ensemble> ensembles(es);
+	
+	FOR3(ei, ej, ek, es)
+	{
+		Vector3i s = numCells / es;
+		Vector3d min = vmin + Vector3d(ei, ej, ek) * Vector3d(s) * cs;
+
+		if (ei == es.x - 1) s.x += numCells.x % es.x;
+		if (ej == es.y - 1) s.y += numCells.y % es.y;
+		if (ek == es.z - 1) s.z += numCells.z % es.z;
+		
+		ensembles(ei, ej, ek) = Ensemble(min, cs, s);
+	}
+
 	double *ex_plot = new double[grid.Ex.GetSize().x];
 	double **ex_dens = new double*[grid.Ex.GetSize().x];
 	for (int i = 0; i < grid.Ex.GetSize().x; i++)
 		ex_dens[i] = new double[grid.Ex.GetSize().y];
 
-	vector<Particle> particles;
-
 	Vector3i s = grid.Ex.GetSize();
-	for (int i = 0; i < s.x; i++)
-		for (int j = 0; j < s.y; j++)
-			for (int k = 0; k < s.z; k++)
+	FOR3(i, j, k, s)
+	{
+		double x = vmin.x + (i - 0.5) * cs.x;
+		grid.Ex(i, j, k) = A * cos(2 * M_PI * x);
+	}
+
+	FOR3(ei, ej, ek, es)
+	{
+		Ensemble &e = ensembles(ei, ej, ek);
+		Vector3i s = e.GetSize();
+
+		FOR3(i, j, k, s)
+		{
+			Vector3d lo = e.GetMin() + Vector3d(i, j, k) * cs;
+			Vector3d hi = lo + cs;
+
+			double cx = lo.x + cs.x*0.5;
+			double f = 23133870163932 * (1.0 + 0.05 * sin(2 * M_PI * cx));
+			int numParticles = int(f * cellVolume / factor);
+
+			ParticleSystem &system = (e(i, j, k) = ParticleSystem(numParticles));
+
+			for (int q = 0 ; q < numParticles; q++)
 			{
-				double x = vmin.x + (i - 0.5) * cs.x;
-				grid.Ex(i, j, k) = A * cos(2 * M_PI * x);
+				Particle p;
+				p.charge = electronCharge;
+				p.mass = electronMass;
+				p.factor = factor;
+
+				p.coords = Vector3d(
+					frand(lo.x, hi.x),
+					frand(lo.y, hi.y),
+					frand(lo.z, hi.z));
+
+				system.Add(p);
 			}
-
-	s = grid.GetNumInnerCells();
-	for (int i = 0; i < s.x; i++)
-		for (int j = 0; j < s.y; j++)
-			for (int k = 0; k < s.z; k++)
-			{
-				Vector3d lo = vmin + Vector3d(i, j, k) * cs;
-				Vector3d hi = lo + cs;
-
-				double cx = lo.x + cs.x*0.5;
-				double f = 23133870163932 * (1.0 + 0.05 * sin(2 * M_PI * cx));
-				double numParticles = f * cellVolume / factor;
-
-				particles.reserve((unsigned)numParticles);
-
-				for (int n = 0; n < numParticles; n++)
-				{
-					Particle p;
-					p.charge = electronCharge;
-					p.mass = electronMass;
-					p.factor = factor;
-
-					p.coords = Vector3d(
-						frand(lo.x, hi.x),
-						frand(lo.y, hi.y),
-						frand(lo.z, hi.z));
-
-					particles.push_back(p);
-				}
-			}
+		}
+	}
 	
 	for (int step = 0; step < numSteps; step++)
 	{
@@ -82,36 +99,49 @@ void ColdPlasmaOscillations()
 
 		grid.ZeroiseJ();
 
-		for (int i = 0, n = particles.size(); i < n; i++)
+		FOR3(ei, ej, ek, es)
 		{
-			Particle &p = particles[i];
-
-			if (p.coords.x < vmin.x) p.coords.x += size.x;
-			else if (p.coords.x > vmax.x) p.coords.x -= size.x;
-			if (p.coords.y < vmin.y) p.coords.y += size.y;
-			else if (p.coords.y > vmax.y) p.coords.y -= size.y;
-			if (p.coords.z < vmin.z) p.coords.z += size.z;
-			else if (p.coords.z > vmax.z) p.coords.z -= size.z;
-
-			grid.DepositCurrents(p);
+			Ensemble &e = ensembles(ei, ej, ek);
+			Vector3i s = e.GetSize();
+			FOR3(i, j, k, s)
+			{
+				ParticleSystem &system = e(i, j, k);
+				system.Begin();
+				while (!system.End())
+				{
+					grid.DepositCurrents(system.Current());
+					system.Next();
+				}
+			}
 		}
 
-		grid.pbc_J();
+		grid.PbcJ();
 
 		grid.SolveField(dt);
 
-		for (int i = 0, n = particles.size(); i < n; i++)
+		FOR3(ei, ej, ek, es)
 		{
-			Particle &p = particles[i];
+			Ensemble &e = ensembles(ei, ej, ek);
+			Vector3i s = e.GetSize();
+			FOR3(i, j, k, s)
+			{
+				ParticleSystem &system = e(i, j, k);
+				system.Begin();
+				while (!system.End())
+				{
+					Particle &p = system.Current();
+					p = ParticleMover().MoveParticle(p, dt, 1, grid);
 
-			if (p.coords.x < vmin.x) p.coords.x += size.x;
-			else if (p.coords.x > vmax.x) p.coords.x -= size.x;
-			if (p.coords.y < vmin.y) p.coords.y += size.y;
-			else if (p.coords.y > vmax.y) p.coords.y -= size.y;
-			if (p.coords.z < vmin.z) p.coords.z += size.z;
-			else if (p.coords.z > vmax.z) p.coords.z -= size.z;
+					if (p.coords.x < vmin.x) p.coords.x += size.x;
+					else if (p.coords.x > vmax.x) p.coords.x -= size.x;
+					if (p.coords.y < vmin.y) p.coords.y += size.y;
+					else if (p.coords.y > vmax.y) p.coords.y -= size.y;
+					if (p.coords.z < vmin.z) p.coords.z += size.z;
+					else if (p.coords.z > vmax.z) p.coords.z -= size.z;
 
-			p = ParticleMover().MoveParticle(p, dt, 1, grid);
+					system.Next();
+				}
+			}
 		}
 
 		if (step % dumpsPerIter == 0)

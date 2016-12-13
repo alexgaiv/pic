@@ -5,4 +5,4 @@
 #pragma warning(disable:4251) // class needs to have dll-interface to be used by clients of class
 #pragma warning(disable:4190) // identifier has C-linkage specified, but returns UDT which is incompatible with C
 
-#endif // _MGL_SW_H_
+#endif

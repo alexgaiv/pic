@@ -35,15 +35,6 @@ void Lattice::Deposit(const Vector3i &cell, const Vector3d &coords, double value
 
 	Lattice &t = *this;
 	int i = cell.x, j = cell.y, k = cell.z;
-
-	/*t(i, j, k) += c_inv.x * c_inv.y * c_inv.z * value;
-	t(i, j, k + 1) += c_inv.x * c_inv.y * c.z * value;
-	t(i, j + 1, k) += c_inv.x * c.y * c_inv.z * value;
-	t(i, j + 1, k + 1) += c_inv.x * c.y * c.z * value;
-	t(i + 1, j, k) += c.x * c_inv.y * c_inv.z * value;
-	t(i + 1, j, k + 1) += c.x * c_inv.y * c.z * value;
-	t(i + 1, j + 1, k) += c.x * c.y * c_inv.z * value;
-	t(i + 1, j + 1, k + 1) += c.x * c.y * c.z * value;*/
 	
 	data[k1]     += c_inv.x * c_inv.y * c_inv.z * value;
 	data[k2]     += c_inv.x * c_inv.y * c.z * value;
@@ -238,7 +229,7 @@ void YeeGrid::pbc(Lattice &l)
 	}
 }
 
-void YeeGrid::pbc_J()
+void YeeGrid::PbcJ()
 {
 	// Jx
 	Vector3i s = Jx.GetSize() - Vector3i(1);

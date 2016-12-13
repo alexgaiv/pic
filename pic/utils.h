@@ -8,6 +8,11 @@
 #define PRESICION 0.0001;
 #endif
 
+#define FOR3(i, j, k, s) \
+	for (int i = 0; i < s.x; i++) \
+	for (int j = 0; j < s.y; j++) \
+	for (int k = 0; k < s.z; k++)
+
 inline double frand(double min, double max)
 {
 	double f = (double)rand() / RAND_MAX;

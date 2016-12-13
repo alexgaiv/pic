@@ -121,6 +121,8 @@
     <ClInclude Include="3rd_party\include\mgl2\window.h" />
     <ClInclude Include="3rd_party\include\mgl2\wnd.h" />
     <ClInclude Include="3rd_party\include\mgl2\wx.h" />
+    <ClInclude Include="array3D.h" />
+    <ClInclude Include="ensemble.h" />
     <ClInclude Include="grid.h" />
     <ClInclude Include="mathtypes.h" />
     <ClInclude Include="mgl_suppress_warnings.h" />
