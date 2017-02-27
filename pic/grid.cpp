@@ -35,7 +35,7 @@ void Lattice::Deposit(const Vector3i &cell, const Vector3d &coords, double value
 
 	Lattice &t = *this;
 	int i = cell.x, j = cell.y, k = cell.z;
-	
+
 	data[k1]     += c_inv.x * c_inv.y * c_inv.z * value;
 	data[k2]     += c_inv.x * c_inv.y * c.z * value;
 	data[k3]     += c_inv.x * c.y * c_inv.z * value;
@@ -100,13 +100,13 @@ FieldPoint YeeGrid::InterpolateField(const Vector3d &coords) const
 		Ex.Interpolate(cell_Ex, pos + shift_JEx),
 		Ey.Interpolate(cell_Ey, pos + shift_JEy),
 		Ez.Interpolate(cell_Ez, pos + shift_JEz)
-	);
+		);
 
 	f.B = Vector3d(
 		Bx.Interpolate(cell_Bx, pos + shift_Bx),
 		By.Interpolate(cell_By, pos + shift_By),
 		Bz.Interpolate(cell_Bz, pos + shift_Bz)
-	);
+		);
 
 	return f;
 }
@@ -144,7 +144,7 @@ void YeeGrid::SolveField(double dt)
 			{
 				Ex(i, j, k) += cdt *
 					((Bz(i, j, k) - Bz(i, j - 1, k)) * d.y -
-					(By(i, j, k) - By(i, j, k - 1)) * d.z) - 
+					(By(i, j, k) - By(i, j, k - 1)) * d.z) -
 					kj * Jx(i, j, k);
 			}
 
@@ -209,26 +209,6 @@ void YeeGrid::SolveField(double dt)
 	for (int a1 = 0; a1 < latt.GetSize().a1; a1++) \
 	for (int a2 = 0; a2 < latt.GetSize().a2; a2++)
 
-void YeeGrid::pbc(Lattice &l)
-{
-	Vector3i s = l.GetSize() - Vector3i(1);
-	BOUNDARY_LOOP(x, y, l)
-	{
-		l(x, y, 0) = l(x, y, s.z - 1);
-		l(x, y, s.z) = l(x, y, 1);
-	}
-	BOUNDARY_LOOP(x, z, l)
-	{
-		l(x, 0, z) = l(x, s.y - 1, z);
-		l(x, s.y, z) = l(x, 1, z);
-	}
-	BOUNDARY_LOOP(y, z, l)
-	{
-		l(0, y, z) = l(s.x - 1, y, z);
-		l(s.x, y, z) = l(1, y, z);
-	}
-}
-
 void YeeGrid::PbcJ()
 {
 	// Jx
@@ -286,8 +266,27 @@ void YeeGrid::PbcJ()
 	}
 }
 
-#undef BOUNDARY_LOOP
+void YeeGrid::pbc(Lattice &l)
+{
+	Vector3i s = l.GetSize() - Vector3i(1);
+	BOUNDARY_LOOP(x, y, l)
+	{
+		l(x, y, 0) = l(x, y, s.z - 1);
+		l(x, y, s.z) = l(x, y, 1);
+	}
+	BOUNDARY_LOOP(x, z, l)
+	{
+		l(x, 0, z) = l(x, s.y - 1, z);
+		l(x, s.y, z) = l(x, 1, z);
+	}
+	BOUNDARY_LOOP(y, z, l)
+	{
+		l(0, y, z) = l(s.x - 1, y, z);
+		l(s.x, y, z) = l(1, y, z);
+	}
+}
 
+#undef BOUNDARY_LOOP
 
 void YeeGrid::pbc_E()
 {

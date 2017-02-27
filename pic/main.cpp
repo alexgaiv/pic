@@ -151,7 +151,6 @@ void ColdPlasmaOscillations()
 
 			for (int ix = 0; ix < grid.Ex.GetSize().x; ix++) {
 				double x = vmin.x + (ix - 0.5) * cs.x;
-				Vector3i s = grid.Ex.GetSize();
 				ex_plot[ix] = grid.InterpolateField(Vector3d(x, center.y, center.z)).E.x;
 			}
 

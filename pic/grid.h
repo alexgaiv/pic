@@ -15,7 +15,7 @@ struct FieldPoint
 class Lattice
 {
 public:
-	Lattice() {  }
+	Lattice() { }
 	Lattice(const Vector3i &size) :
 		data(size.x * size.y * size.z),
 		size(size),
