@@ -1,3 +1,13 @@
+		grid->Bz.data[j2 + grid->Bz.size.x * grid->Bz.size.y];
+#ifndef M_PI
+#define M_PI 3.14159265358979323846f
+#endif
+
+#include "grid.h"
+#include "utils.h"
+
+void CopyToGlobal(struct Grid *grid, int3 cId, int3 cId_g);
+
 kernel void main(
 	float3 vmin, float3 vmax, int3 numInnerCells,
 
@@ -24,44 +34,73 @@ kernel void main(
 	// global cell id
 	int3 cId_g = eId * ls + cId;
 
-	float3 cellSize = (vmax - vmin) / (float3)(numInnerCells.x, numInnerCells.y, numInnerCells.z);
+	struct Grid grid = createGrid(ls, gs, vmin, vmax, numInnerCells,
+		Ex, Ey, Ez, Bx, By, Bz, Jx, Jy, Jz,
+		Ex_g, Ey_g, Ez_g, Bx_g, By_g, Bz_g, Jx_g, Jy_g, Jz_g);
 
-	// arrays sizes (z is not used)
-	int2 sEx = ls.xy + (int2)(0, 1);
-	int2 sEy = ls.xy + (int2)(1, 0);
-	int2 sEz = ls.xy + (int2)(1, 1);
-	int2 sBx = ls.xy + (int2)(1, 0);
-	int2 sBy = ls.xy + (int2)(0, 1);
-	int2 sBz = ls.xy;
-
-	int2 sEx_g = gs.xy + (int2)(2, 3); // + boundary cells
-	int2 sEy_g = gs.xy + (int2)(3, 2);
-	int2 sEz_g = gs.xy + (int2)(3, 3);
-	int2 sBx_g = gs.xy + (int2)(3, 2);
-	int2 sBy_g = gs.xy + (int2)(2, 3);
-	int2 sBz_g = gs.xy + (int2)(2, 2);
-
-	float x = vmin.x + (cId_g.x - 0.5) * cellSize.x;
+	float3 cellSize = grid.cellSize;
+	float x = vmin.x + (cId_g.x + 0.5) * cellSize.x;
 	float E = 1111 * cos(2 * M_PI * x);
 
-	int i1 = (cId.z * sEx.y + cId.y) * sEx.x + cId.x;
-	int i2 = (cId.z * sEx.y + cId.y + 1) * sEx.x + cId.x;
-	int i3 = ((cId.z + 1) * sEx.y + cId.y) * sEx.x + cId.x;
-	int i4 = ((cId.z + 1) * sEx.y + cId.y + 1) * sEx.x + cId.x;
+	int4 i = idx4(cId, grid.Ex.size);
+	Ex[i.x] = E;
+	Ex[i.y] = E;
+	Ex[i.z] = E;
+	Ex[i.w] = E;
 
-	Ex[i1] = E;
-	Ex[i2] = E;
-	Ex[i3] = E;
-	Ex[i4] = E;
+	float x1 = vmin.x + cId_g.x * cellSize.x;
+	float x2 = x1 + cellSize.x;
+	float B1 = 1111 * cos(2 * M_PI * x1);
+	float B2 = 1111 * cos(2 * M_PI * x2);
 
-	
+	int j = idx(cId, grid.Bx.size);
+	Bx[j] = B1;
+	Bx[j + 1] = B2;
 
 	barrier(CLK_LOCAL_MEM_FENCE);
 
-	// copy local memory to global
-	int3 t = cId_g + (int3)(1, 1, 1);
-	Ex_g[(t.z * sEx_g.y + t.y) * sEx_g.x + t.x]           = Ex[i1];
-	Ex_g[(t.z * sEx_g.y + t.y + 1) * sEx_g.x + t.x]       = Ex[i2];
-	Ex_g[((t.z + 1) * sEx_g.y + t.y) * sEx_g.x + t.x]     = Ex[i3];
-	Ex_g[((t.z + 1) * sEx_g.y + t.y + 1) * sEx_g.x + t.x] = Ex[i4];
+	//float3 p = (convert_float3(cId_g) + (float3)0.5) * cellSize;
+	//struct FieldPoint f = grid_InterpolateField(&grid, p, cId_g);
+
+	CopyToGlobal(&grid, cId, cId_g);
+}
+
+void CopyToGlobal(struct Grid *grid, int3 cId, int3 cId_g)
+{
+	int4 i1 = idx4(cId_g + (int3)1, grid->Ex.size_g);
+	int4 i2 = idx4(cId, grid->Ex.size);
+	grid->Ex.data_g[i1.x] = grid->Ex.data[i2.x];
+	grid->Ex.data_g[i1.y] = grid->Ex.data[i2.y];
+	grid->Ex.data_g[i1.z] = grid->Ex.data[i2.z];
+	grid->Ex.data_g[i1.w] = grid->Ex.data[i2.w];
+
+	i1 = idx4(cId_g + (int3)1, grid->Ey.size_g);
+	i2 = idx4(cId, grid->Ey.size);
+	grid->Ey.data_g[i1.x]     = grid->Ey.data[i2.x];
+	grid->Ey.data_g[i1.x + 1] = grid->Ey.data[i2.x + 1];
+	grid->Ey.data_g[i1.z]     = grid->Ey.data[i2.z];
+	grid->Ey.data_g[i1.z + 1] = grid->Ey.data[i2.z + 1];
+
+	i1 = idx4(cId_g + (int3)1, grid->Ez.size_g);
+	i2 = idx4(cId, grid->Ez.size);
+	grid->Ez.data_g[i1.x]     = grid->Ez.data[i2.x];
+	grid->Ez.data_g[i1.x + 1] = grid->Ez.data[i2.x + 1];
+	grid->Ez.data_g[i1.y]     = grid->Ez.data[i2.y];
+	grid->Ez.data_g[i1.y + 1] = grid->Ez.data[i2.y + 1];
+
+	int j1 = idx(cId_g + (int3)1, grid->Bx.size_g);
+	int j2 = idx(cId, grid->Bx.size);
+	grid->Bx.data_g[j1]     = grid->Bx.data[j2];
+	grid->Bx.data_g[j1 + 1] = grid->Bx.data[j2 + 1];
+
+	j1 = idx(cId_g + (int3)1, grid->By.size_g);
+	j2 = idx(cId, grid->By.size);
+	grid->By.data_g[j1]                     = grid->By.data[j2];
+	grid->By.data_g[j1 + grid->By.size_g.x] = grid->By.data[j2 + grid->By.size.x];
+
+	j1 = idx(cId_g + (int3)1, grid->Bz.size_g);
+	j2 = idx(cId, grid->Bz.size);
+	grid->Bz.data_g[j1] = grid->Bz.data[j2];
+	grid->Bz.data_g[j1 + grid->Bz.size_g.x * grid->Bz.size_g.y] =
+		grid->Bz.data[j2 + grid->Bz.size.x * grid->Bz.size.y];
 }

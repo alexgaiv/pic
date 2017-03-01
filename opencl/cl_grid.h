@@ -10,14 +10,15 @@ class cl_Lattice
 public:
 	cl::Buffer buffer;
 
-	cl_Lattice(const Vector3i &size, cl::CommandQueue &queue) :
+	cl_Lattice(cl::CommandQueue &q, const Vector3i &size) :
+		q(q),
 		data(size.x * size.y * size.z),
 		size(size)
 	{
-		cl::Context ctx = queue.getInfo<CL_QUEUE_CONTEXT>();
+		cl::Context ctx = q.getInfo<CL_QUEUE_CONTEXT>();
 		std::size_t memSize = data.size() * sizeof(real_t);
 		buffer = cl::Buffer(ctx, CL_MEM_READ_WRITE, memSize);
-		queue.enqueueWriteBuffer(buffer, true, 0, memSize, data.data());
+		q.enqueueWriteBuffer(buffer, true, 0, memSize, data.data());
 	}
 
 	Vector3i GetSize() const { return size; }
@@ -31,13 +32,14 @@ public:
 		return data[(k * size.y + j) * size.x + i];
 	}
 
-	void ReadBuffer(cl::CommandQueue &queue)
+	void ReadBuffer()
 	{
-		queue.enqueueReadBuffer(buffer, true, 0, data.size() * sizeof(real_t), data.data());
+		q.enqueueReadBuffer(buffer, true, 0, data.size() * sizeof(real_t), data.data());
 	}
 private:
 	std::vector<real_t> data;
 	Vector3i size;
+	cl::CommandQueue q;
 };
 
 class cl_Grid
@@ -45,23 +47,23 @@ class cl_Grid
 private:
 	Vector3i numCells;
 public:
-	cl_Grid(const Vector3f &vmin, const Vector3f &vmax, const Vector3i &numInnerCells, cl::CommandQueue &q) :
+	cl_Grid(cl::CommandQueue &q, const Vector3f &vmin, const Vector3f &vmax, const Vector3i &numInnerCells) :
 		vmin(vmin),
 		vmax(vmax),
 		numCells(numInnerCells + Vector3i(2)),
 		cellSize((vmax - vmin) / numInnerCells),
 
-		Ex(numCells + Vector3i(0, 1, 1), q),
-		Ey(numCells + Vector3i(1, 0, 1), q),
-		Ez(numCells + Vector3i(1, 1, 0), q),
+		Ex(q, numCells + Vector3i(0, 1, 1)),
+		Ey(q, numCells + Vector3i(1, 0, 1)),
+		Ez(q, numCells + Vector3i(1, 1, 0)),
 
-		Bx(numCells + Vector3i(1, 0, 0), q),
-		By(numCells + Vector3i(0, 1, 0), q),
-		Bz(numCells + Vector3i(0, 0, 1), q),
+		Bx(q, numCells + Vector3i(1, 0, 0)),
+		By(q, numCells + Vector3i(0, 1, 0)),
+		Bz(q, numCells + Vector3i(0, 0, 1)),
 
-		Jx(numCells + Vector3i(0, 1, 1), q),
-		Jy(numCells + Vector3i(1, 0, 1), q),
-		Jz(numCells + Vector3i(1, 1, 0), q)
+		Jx(q, numCells + Vector3i(0, 1, 1)),
+		Jy(q, numCells + Vector3i(1, 0, 1)),
+		Jz(q, numCells + Vector3i(1, 1, 0))
 	{ }
 
 	Vector3f GetMin() const { return vmin; }

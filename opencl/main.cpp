@@ -3,6 +3,7 @@
 #define NOMINMAX
 
 #include "mgl_suppress_warnings.h"
+#include <Windows.h>
 #include <stdlib.h>
 #include <iostream>
 #include <cl\cl.hpp>
@@ -11,13 +12,17 @@
 #include "utils.h"
 #include "cl_grid.h"
 
+#pragma comment(lib, "Winmm.lib")
+
 using namespace cl;
 using namespace std;
 
-void BuildPlot(const cl_Lattice &latt, const cl_Grid &grid);
+void BuildPlotEx(const cl_Lattice &latt, const cl_Grid &grid, const char *filename);
 
 int main()
 {
+	timeBeginPeriod(1);
+
 	try
 	{
 		cout << "init context...";
@@ -33,6 +38,8 @@ int main()
 			cout << "building a program...";
 			program.build("-I cl");
 			cout << "done\n";
+			string log = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device);
+			if (log != "") OutputDebugStringA(log.c_str());
 		}
 		catch (const Error &e)
 		{
@@ -41,7 +48,7 @@ int main()
 			throw e;
 		}
 
-		cl_Grid grid(Vector3f(0), Vector3f(1, 0.125, 0.125), Vector3i(64, 8, 8), queue);
+		cl_Grid grid(queue, Vector3f(0), Vector3f(1, 0.125, 0.125), Vector3i(64, 8, 8));
 		Vector3i groupNum(4, 4, 4);
 		Vector3i numCells = grid.GetNumInnerCells();
 		Vector3i groupSize = numCells / groupNum;
@@ -73,12 +80,22 @@ int main()
 		kernel.setArg(19, (groupNum.x + 1) * groupNum.y * (groupNum.z + 1) * sizeof(real_t), NULL);
 		kernel.setArg(20, (groupNum.x + 1) * (groupNum.y + 1) * groupNum.z * sizeof(real_t), NULL);
 
+		int dt = timeGetTime();
 		queue.enqueueNDRangeKernel(kernel, NullRange,
 			NDRange(numCells.x, numCells.y, numCells.z),
 			NDRange(groupSize.x, groupSize.y, groupSize.z));
 
-		grid.Ex.ReadBuffer(queue);
-		BuildPlot(grid.Ex, grid);
+		grid.Ex.ReadBuffer();
+		grid.Ey.ReadBuffer();
+		grid.Ez.ReadBuffer();
+		grid.Bx.ReadBuffer();
+		grid.By.ReadBuffer();
+		grid.Bz.ReadBuffer();
+
+		dt = timeGetTime() - dt;
+		cout << dt << "ms" << endl;
+
+		BuildPlotEx(grid.Ex, grid, "plot/ex.bmp");
 		
 		queue.flush();
 		queue.finish();
@@ -90,10 +107,11 @@ int main()
 	
 	cout << "\nend";
 	getchar();
+	timeEndPeriod(1);
 	return 0;
 }
 
-void BuildPlot(const cl_Lattice &latt, const cl_Grid &grid)
+void BuildPlotEx(const cl_Lattice &latt, const cl_Grid &grid, const char *filename)
 {
 	Vector3f vmin = grid.GetMin();
 	Vector3f vmax = grid.GetMax();
@@ -131,7 +149,7 @@ void BuildPlot(const cl_Lattice &latt, const cl_Grid &grid)
 	gr.Label('x', "x");
 	gr.Label('y', "E_x");
 	gr.Axis();
-	y.Set(ex_plot, grid.Ex.GetSize().x - 2);
+	y.Set(ex_plot, latt.GetSize().x - 2);
 	gr.Plot(y);
 
 	gr.SubPlot(2, 1, 1);
@@ -142,13 +160,13 @@ void BuildPlot(const cl_Lattice &latt, const cl_Grid &grid)
 	gr.Axis();
 	gr.Box();
 	gr.Colorbar();
-	y.Set(ex_dens, grid.Ex.GetSize().x - 2, grid.Ex.GetSize().y - 2);
+	y.Set(ex_dens, latt.GetSize().x - 2, latt.GetSize().y - 2);
 	gr.Dens(y);
 
-	gr.WriteBMP("plot/ex.bmp");
+	gr.WriteBMP(filename);
 
 	delete[] ex_plot;
-	for (int i = 0; i < grid.Ex.GetSize().x - 2; i++)
+	for (int i = 0; i < latt.GetSize().x - 2; i++)
 		delete[] ex_dens[i];
 	delete[] ex_dens;
 }
