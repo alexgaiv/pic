@@ -1,4 +1,3 @@
-		grid->Bz.data[j2 + grid->Bz.size.x * grid->Bz.size.y];
 #ifndef M_PI
 #define M_PI 3.14159265358979323846f
 #endif
