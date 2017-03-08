@@ -57,6 +57,9 @@ struct Grid
 {
 	float3 vmin, vmax;
 	float3 cellSize;
+	int3 localSize;
+	int3 globalSize;
+	int3 eId;
 
 	struct Field Ex, Ey, Ez;
 	struct Field Bx, By, Bz;
@@ -64,7 +67,7 @@ struct Grid
 };
 
 struct Grid createGrid(
-	int3 ls, int3 gs,
+	int3 ls, int3 gs, int3 eId,
 	float3 vmin, float3 vmax,
 	int3 numInnerCells,
 	local float *Ex, local float *Ey, local float *Ez,
@@ -80,15 +83,19 @@ struct Grid createGrid(
 	grid.vmin = vmin;
 	grid.vmax = vmax;
 	grid.cellSize = (vmax - vmin) / convert_float3(numInnerCells);
+	grid.localSize = ls;
+	grid.globalSize = gs;
+	grid.eId = eId;
+	
 
-	int3 sEx = ls + (int3)(0, 1, 1);
-	int3 sEy = ls + (int3)(1, 0, 1);
-	int3 sEz = ls + (int3)(1, 1, 0);
-	int3 sBx = ls + (int3)(1, 0, 0);
-	int3 sBy = ls + (int3)(0, 1, 0);
-	int3 sBz = ls + (int3)(0, 0, 1);
+	int3 sEx = ls + (int3)(2, 3, 3);
+	int3 sEy = ls + (int3)(3, 2, 3);
+	int3 sEz = ls + (int3)(3, 3, 2);
+	int3 sBx = ls + (int3)(3, 2, 2);
+	int3 sBy = ls + (int3)(2, 3, 2);
+	int3 sBz = ls + (int3)(2, 2, 3);
 
-	int3 sEx_g = gs + (int3)(2, 3, 3); // + boundary cells
+	int3 sEx_g = gs + (int3)(2, 3, 3);
 	int3 sEy_g = gs + (int3)(3, 2, 3);
 	int3 sEz_g = gs + (int3)(3, 3, 2);
 	int3 sBx_g = gs + (int3)(3, 2, 2);
@@ -110,7 +117,7 @@ struct Grid createGrid(
 
 struct FieldPoint grid_InterpolateField(struct Grid *grid, float3 coords, int3 cell)
 {
-	float3 pos = (coords - grid->vmin) / grid->cellSize - convert_float3(cell);
+	float3 pos = (coords - grid->vmin) / grid->cellSize - convert_float3(grid->eId * grid->localSize);
 	int3 cell2 = convert_int3(floor(pos + (float3)0.5));
 
 	int3 cell_Ex = cell;

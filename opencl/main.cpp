@@ -68,17 +68,18 @@ int main()
 		kernel.setArg(10, grid.Jy.buffer);
 		kernel.setArg(11, grid.Jz.buffer);
 
-		kernel.setArg(12, groupNum.x * (groupNum.y + 1) * (groupNum.z + 1) * sizeof(real_t), NULL);
-		kernel.setArg(13, (groupNum.x + 1) * groupNum.y * (groupNum.z + 1) * sizeof(real_t), NULL);
-		kernel.setArg(14, (groupNum.x + 1) * (groupNum.y + 1) * groupNum.z * sizeof(real_t), NULL);
+		Vector3i s = groupSize + Vector3i(2);
+		kernel.setArg(12, s.x * (s.y + 1) * (s.z + 1) * sizeof(real_t), NULL);
+		kernel.setArg(13, (s.x + 1) * s.y * (s.z + 1) * sizeof(real_t), NULL);
+		kernel.setArg(14, (s.x + 1) * (s.y + 1) * s.z * sizeof(real_t), NULL);
 
-		kernel.setArg(15, (groupNum.x + 1) * groupNum.y * groupNum.z * sizeof(real_t), NULL);
-		kernel.setArg(16, groupNum.x * (groupNum.y + 1) * groupNum.z * sizeof(real_t), NULL);
-		kernel.setArg(17, groupNum.x * groupNum.y * (groupNum.z + 1) * sizeof(real_t), NULL);
+		kernel.setArg(15, (s.x + 1) * s.y * s.z * sizeof(real_t), NULL);
+		kernel.setArg(16, s.x * (s.y + 1) * s.z * sizeof(real_t), NULL);
+		kernel.setArg(17, s.x * s.y * (s.z + 1) * sizeof(real_t), NULL);
 
-		kernel.setArg(18, groupNum.x * (groupNum.y + 1) * (groupNum.z + 1) * sizeof(real_t), NULL);
-		kernel.setArg(19, (groupNum.x + 1) * groupNum.y * (groupNum.z + 1) * sizeof(real_t), NULL);
-		kernel.setArg(20, (groupNum.x + 1) * (groupNum.y + 1) * groupNum.z * sizeof(real_t), NULL);
+		kernel.setArg(18, s.x * (s.y + 1) * (s.z + 1) * sizeof(real_t), NULL);
+		kernel.setArg(19, (s.x + 1) * s.y * (s.z + 1) * sizeof(real_t), NULL);
+		kernel.setArg(20, (s.x + 1) * (s.y + 1) * s.z * sizeof(real_t), NULL);
 
 		int dt = timeGetTime();
 		queue.enqueueNDRangeKernel(kernel, NullRange,
@@ -117,27 +118,27 @@ void BuildPlotEx(const cl_Lattice &latt, const cl_Grid &grid, const char *filena
 	Vector3f vmax = grid.GetMax();
 	Vector3f cs = grid.GetCellSize();
 
-	double *ex_plot = new double[latt.GetSize().x - 2];
-	double **ex_dens = new double*[latt.GetSize().x - 2];
-	for (int i = 0; i < latt.GetSize().x - 2; i++)
-		ex_dens[i] = new double[latt.GetSize().y - 2];
+	double *ex_plot = new double[latt.GetSize().x];
+	double **ex_dens = new double*[latt.GetSize().y];
+	for (int i = 0; i < latt.GetSize().y; i++)
+		ex_dens[i] = new double[latt.GetSize().x];
 
 	mglGraph gr;
 	mglData y;
 
 	Vector3d center = (vmin + vmax) / 2;
 
-	for (int ix = 1; ix < latt.GetSize().x - 1; ix++) {
+	for (int ix = 0; ix < latt.GetSize().x; ix++) {
 		double x = vmin.x + (ix - 0.5) * cs.x;
 		Vector3i s = latt.GetSize();
-		ex_plot[ix - 1] = latt(ix, s.y / 2, s.z / 2);
+		ex_plot[ix] = latt(ix, s.y / 2, s.z / 2);
 	}
 
-	for (int ix = 1; ix < latt.GetSize().x - 1; ix++) {
-		for (int iy = 1; iy < latt.GetSize().y - 1; iy++) {
+	for (int ix = 0; ix < latt.GetSize().x; ix++) {
+		for (int iy = 0; iy < latt.GetSize().y; iy++) {
 			double x = vmin.x + (ix - 0.5) * cs.x;
 			double y = vmin.y + (iy - 1.0) * cs.y;
-			ex_dens[ix - 1][iy - 1] = latt(ix, iy, latt.GetSize().z / 2);
+			ex_dens[iy][ix] = latt(ix, iy, latt.GetSize().z / 2);
 		}
 	}
 
@@ -149,7 +150,7 @@ void BuildPlotEx(const cl_Lattice &latt, const cl_Grid &grid, const char *filena
 	gr.Label('x', "x");
 	gr.Label('y', "E_x");
 	gr.Axis();
-	y.Set(ex_plot, latt.GetSize().x - 2);
+	y.Set(ex_plot, latt.GetSize().x);
 	gr.Plot(y);
 
 	gr.SubPlot(2, 1, 1);
@@ -160,13 +161,13 @@ void BuildPlotEx(const cl_Lattice &latt, const cl_Grid &grid, const char *filena
 	gr.Axis();
 	gr.Box();
 	gr.Colorbar();
-	y.Set(ex_dens, latt.GetSize().x - 2, latt.GetSize().y - 2);
+	y.Set(ex_dens, latt.GetSize().y, latt.GetSize().x);
 	gr.Dens(y);
 
 	gr.WriteBMP(filename);
 
 	delete[] ex_plot;
-	for (int i = 0; i < latt.GetSize().x - 2; i++)
+	for (int i = 0; i < latt.GetSize().y; i++)
 		delete[] ex_dens[i];
 	delete[] ex_dens;
 }

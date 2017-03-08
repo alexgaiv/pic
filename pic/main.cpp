@@ -49,9 +49,9 @@ void ColdPlasmaOscillations()
 	}
 
 	double *ex_plot = new double[grid.Ex.GetSize().x];
-	double **ex_dens = new double*[grid.Ex.GetSize().x];
-	for (int i = 0; i < grid.Ex.GetSize().x; i++)
-		ex_dens[i] = new double[grid.Ex.GetSize().y];
+	double **ex_dens = new double*[grid.Ex.GetSize().y];
+	for (int i = 0; i < grid.Ex.GetSize().y; i++)
+		ex_dens[i] = new double[grid.Ex.GetSize().x];
 
 	Vector3i s = grid.Ex.GetSize();
 	FOR3(i, j, k, s)
@@ -158,7 +158,7 @@ void ColdPlasmaOscillations()
 				for (int iy = 0; iy < grid.Ex.GetSize().y; iy++) {
 					double x = vmin.x + (ix - 0.5) * cs.x;
 					double y = vmin.y + (iy - 1.0) * cs.y;
-					ex_dens[ix][iy] = grid.InterpolateField(Vector3d(x, y, center.z)).E.x;
+					ex_dens[iy][ix] = grid.InterpolateField(Vector3d(x, y, center.z)).E.x;
 				}
 			}
 			
@@ -180,7 +180,7 @@ void ColdPlasmaOscillations()
 			gr.Axis();
 			gr.Box();
 			gr.Colorbar();
-			y.Set(ex_dens, grid.Ex.GetSize().x, grid.Ex.GetSize().y);
+			y.Set(ex_dens, grid.Ex.GetSize().y, grid.Ex.GetSize().x);
 			gr.Dens(y);
 
 			char filename[100];
@@ -190,7 +190,7 @@ void ColdPlasmaOscillations()
 	}
 
 	delete[] ex_plot;
-	for (int i = 0; i < grid.Ex.GetSize().x; i++)
+	for (int i = 0; i < grid.Ex.GetSize().y; i++)
 		delete[] ex_dens[i];
 	delete[] ex_dens;
 }
