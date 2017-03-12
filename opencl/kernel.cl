@@ -111,12 +111,9 @@ kernel void main(
 
 	barrier(CLK_LOCAL_MEM_FENCE);
 
-	if (cId_g.x == 0 && cId_g.y == 0 && cId_g.z == 0)
-	{
-		float3 p = (convert_float3(cId_g) + (float3)0.3) * cellSize;
-		struct FieldPoint f = grid_InterpolateField(&grid, p, cId);
-		test[idx(cId_g, gs)] = fabs(f.E.x - p.x) < 0.0001 ? 1 : 0;
-	}
+	float3 p = (convert_float3(cId_g) + (float3)0.3) * cellSize;
+	struct FieldPoint f = grid_InterpolateField(&grid, p, cId);
+	test[idx(cId_g, gs)] = fabs(f.E.x - p.x) < 0.0001 ? 1 : 0;
 
 	CopyToGlobal(&grid, cId, cId_g);
 }
