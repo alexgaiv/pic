@@ -6,6 +6,11 @@
 #include <CL\cl.hpp>
 #include <fstream>
 
+#define FOR3(i, j, k, s) \
+	for (int i = 0; i < s.x; i++) \
+	for (int j = 0; j < s.y; j++) \
+	for (int k = 0; k < s.z; k++)
+
 inline cl_float3 v2v(const Vector3f &v) {
 	cl_float3 vec = { v.x, v.y, v.z };
 	return vec;

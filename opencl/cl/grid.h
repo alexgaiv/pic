@@ -120,9 +120,9 @@ struct FieldPoint grid_InterpolateField(struct Grid *grid, float3 coords, int3 c
 	float3 pos = (coords - grid->vmin) / grid->cellSize - convert_float3(grid->eId * grid->localSize);
 	int3 cell2 = convert_int3(floor(pos + (float3)0.5));
 
-	int3 cell_Ex = cell;
-	int3 cell_Ey = cell;
-	int3 cell_Ez = cell;
+	int3 cell_Ex = cell + (int3)1;
+	int3 cell_Ey = cell_Ex;
+	int3 cell_Ez = cell_Ex;
 	cell_Ex.x = cell2.x;
 	cell_Ey.y = cell2.y;
 	cell_Ez.z = cell2.z;

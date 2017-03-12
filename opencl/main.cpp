@@ -81,6 +81,12 @@ int main()
 		kernel.setArg(19, (s.x + 1) * s.y * (s.z + 1) * sizeof(real_t), NULL);
 		kernel.setArg(20, (s.x + 1) * (s.y + 1) * s.z * sizeof(real_t), NULL);
 
+		int testSize = numCells.x * numCells.y * numCells.z;
+		cl::Buffer testMem(ctx, CL_MEM_WRITE_ONLY, testSize * sizeof(int));
+		int *testData = new int[testSize];
+
+		kernel.setArg(21, testMem);
+
 		int dt = timeGetTime();
 		queue.enqueueNDRangeKernel(kernel, NullRange,
 			NDRange(numCells.x, numCells.y, numCells.z),
@@ -92,9 +98,23 @@ int main()
 		grid.Bx.ReadBuffer();
 		grid.By.ReadBuffer();
 		grid.Bz.ReadBuffer();
+		queue.enqueueReadBuffer(testMem, true, 0, testSize * sizeof(int), testData);
 
 		dt = timeGetTime() - dt;
 		cout << dt << "ms" << endl;
+
+		bool passed = true;
+		FOR3(i, j, k, numCells)
+		{
+			int idx = (k * numCells.y + j) * numCells.x + i;
+			if (testData[idx] == 0)
+			{
+				passed = false;
+				cout << '(' << i << ", " << j << ", " << k << ") ";
+			}
+		}
+		cout << (passed ? "\npassed" : "\nfailed");
+		delete[] testData;
 
 		BuildPlotEx(grid.Ex, grid, "plot/ex.bmp");
 		

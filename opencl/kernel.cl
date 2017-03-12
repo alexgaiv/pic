@@ -16,7 +16,8 @@ kernel void main(
 
 	local float *Ex, local float *Ey, local float *Ez,
 	local float *Bx, local float *By, local float *Bz,
-	local float *Jx, local float *Jy, local float *Jz)
+	local float *Jx, local float *Jy, local float *Jz,
+	global int *test)
 {
 	// ensemble size
 	int3 ls = (int3)(get_local_size(0), get_local_size(1), get_local_size(2));
@@ -41,61 +42,61 @@ kernel void main(
 
 	float3 cellSize = grid.cellSize;
 	float x = vmin.x + (cId_g.x + 0.5) * cellSize.x;
-	float E = 1111 * cos(2 * M_PI * x);
+	//float E = 1111 * cos(2 * M_PI * x);
 
 	int4 i = idx4(cId + (int3)1, grid.Ex.size);
-	Ex[i.x] = E;
-	Ex[i.y] = E;
-	Ex[i.z] = E;
-	Ex[i.w] = E;
+	Ex[i.x] = x;
+	Ex[i.y] = x;
+	Ex[i.z] = x;
+	Ex[i.w] = x;
 
 	//*/
 	if (cId.x == 0)
 	{
 		float x = vmin.x + (cId_g.x - 0.5) * cellSize.x;
-		float E = 1111 * cos(2 * M_PI * x);
+		//float E = 1111 * cos(2 * M_PI * x);
 		int4 i = idx4(cId + (int3)(0, 1, 1), grid.Ex.size);
-		Ex[i.x] = E;
-		Ex[i.y] = E;
-		Ex[i.z] = E;
-		Ex[i.w] = E;
+		Ex[i.x] = x;
+		Ex[i.y] = x;
+		Ex[i.z] = x;
+		Ex[i.w] = x;
 	}
 	else if (cId.x == ls.x - 1)
 	{
 		float x = vmin.x + (cId_g.x + 1.5) * cellSize.x;
-		float E = 1111 * cos(2 * M_PI * x);
+		//float E = 1111 * cos(2 * M_PI * x);
 		int4 i = idx4(cId + (int3)(2, 1, 1), grid.Ex.size);
-		Ex[i.x] = E;
-		Ex[i.y] = E;
-		Ex[i.z] = E;
-		Ex[i.w] = E;
+		Ex[i.x] = x;
+		Ex[i.y] = x;
+		Ex[i.z] = x;
+		Ex[i.w] = x;
 	}
 
 	if (cId.y == 0)
 	{
 		int4 i = idx4(cId + (int3)(1, 0, 1), grid.Ex.size);
-		Ex[i.x] = E;
-		Ex[i.z] = E;
+		Ex[i.x] = x;
+		Ex[i.z] = x;
 
 	}
 	else if (cId.y == ls.y - 1)
 	{
 		int4 i = idx4(cId + (int3)(1, 2, 1), grid.Ex.size);
-		Ex[i.y] = E;
-		Ex[i.w] = E;
+		Ex[i.y] = x;
+		Ex[i.w] = x;
 	}
 
 	if (cId.z == 0)
 	{
 		int4 i = idx4(cId + (int3)(1, 1, 0), grid.Ex.size);
-		Ex[i.x] = E;
-		Ex[i.y] = E;
+		Ex[i.x] = x;
+		Ex[i.y] = x;
 	}
 	else if (cId.z == ls.z - 1)
 	{
 		int4 i = idx4(cId + (int3)(1, 1, 2), grid.Ex.size);
-		Ex[i.z] = E;
-		Ex[i.w] = E;
+		Ex[i.z] = x;
+		Ex[i.w] = x;
 	}
 	//*/
 
@@ -110,8 +111,12 @@ kernel void main(
 
 	barrier(CLK_LOCAL_MEM_FENCE);
 
-	//float3 p = (convert_float3(cId_g) + (float3)0.5) * cellSize;
-	//struct FieldPoint f = grid_InterpolateField(&grid, p, cId);
+	if (cId_g.x == 0 && cId_g.y == 0 && cId_g.z == 0)
+	{
+		float3 p = (convert_float3(cId_g) + (float3)0.3) * cellSize;
+		struct FieldPoint f = grid_InterpolateField(&grid, p, cId);
+		test[idx(cId_g, gs)] = fabs(f.E.x - p.x) < 0.0001 ? 1 : 0;
+	}
 
 	CopyToGlobal(&grid, cId, cId_g);
 }
