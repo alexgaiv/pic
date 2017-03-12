@@ -26,12 +26,15 @@ struct Field
 	int3 size_g;
 };
 
-struct Field createField(
+void initField(
+ 	struct Field *field,
 	local float *data, int3 size,
 	global float *data_g, int3 size_g)
 {
-	struct Field field = { data, size, data_g, size_g };
-	return field;
+	field->data = data;
+	field->size = size;
+	field->data_g = data_g;
+	field->size_g = size_g;
 }
 
 double field_Interpolate(struct Field *field, int3 cell, float3 coords)
@@ -55,19 +58,18 @@ double field_Interpolate(struct Field *field, int3 cell, float3 coords)
 
 struct Grid
 {
+	struct WorkItemInfo wi;
 	float3 vmin, vmax;
 	float3 cellSize;
-	int3 localSize;
-	int3 globalSize;
-	int3 eId;
 
 	struct Field Ex, Ey, Ez;
 	struct Field Bx, By, Bz;
 	struct Field Jx, Jy, Jz;
 };
 
-struct Grid createGrid(
-	int3 ls, int3 gs, int3 eId,
+void initGrid(
+ 	struct Grid *grid,
+	struct WorkItemInfo *wi,
 	float3 vmin, float3 vmax,
 	int3 numInnerCells,
 	local float *Ex, local float *Ey, local float *Ez,
@@ -78,15 +80,13 @@ struct Grid createGrid(
 	global float *Bx_g, global float *By_g, global float *Bz_g,
 	global float *Jx_g, global float *Jy_g, global float *Jz_g)
 {
-	struct Grid grid;
-
-	grid.vmin = vmin;
-	grid.vmax = vmax;
-	grid.cellSize = (vmax - vmin) / convert_float3(numInnerCells);
-	grid.localSize = ls;
-	grid.globalSize = gs;
-	grid.eId = eId;
+	grid->vmin = vmin;
+	grid->vmax = vmax;
+	grid->cellSize = (vmax - vmin) / convert_float3(numInnerCells);
+	grid->wi = *wi;
 	
+	int3 ls = wi->local_size;
+	int3 gs = wi->global_size;
 
 	int3 sEx = ls + (int3)(2, 3, 3);
 	int3 sEy = ls + (int3)(3, 2, 3);
@@ -102,22 +102,21 @@ struct Grid createGrid(
 	int3 sBy_g = gs + (int3)(2, 3, 2);
 	int3 sBz_g = gs + (int3)(2, 2, 3);
 
-	grid.Ex = createField(Ex, sEx, Ex_g, sEx_g);
-	grid.Ey = createField(Ey, sEy, Ey_g, sEy_g);
-	grid.Ez = createField(Ez, sEz, Ez_g, sEz_g);
-	grid.Bx = createField(Bx, sBx, Bx_g, sBx_g);
-	grid.By = createField(By, sBy, By_g, sBy_g);
-	grid.Bz = createField(Bz, sBz, Bz_g, sBz_g);
-	grid.Jz = createField(Jz, sEz, Jz_g, sEz_g);
-	grid.Jy = createField(Jy, sEy, Jy_g, sEy_g);
-	grid.Jz = createField(Jz, sEz, Jz_g, sEz_g);
-
-	return grid;
+	initField(&grid->Ex, Ex, sEx, Ex_g, sEx_g);
+	initField(&grid->Ey, Ey, sEy, Ey_g, sEy_g);
+	initField(&grid->Ez, Ez, sEz, Ez_g, sEz_g);
+	initField(&grid->Bx, Bx, sBx, Bx_g, sBx_g);
+	initField(&grid->By, By, sBy, By_g, sBy_g);
+	initField(&grid->Bz, Bz, sBz, Bz_g, sBz_g);
+	initField(&grid->Jz, Jz, sEz, Jz_g, sEz_g);
+	initField(&grid->Jy, Jy, sEy, Jy_g, sEy_g);
+	initField(&grid->Jz, Jz, sEz, Jz_g, sEz_g);
 }
 
 struct FieldPoint grid_InterpolateField(struct Grid *grid, float3 coords, int3 cell)
 {
-	float3 pos = (coords - grid->vmin) / grid->cellSize - convert_float3(grid->eId * grid->localSize);
+	float3 pos = (coords - grid->vmin) / grid->cellSize -
+		convert_float3(grid->wi.group_id * grid->wi.local_size);
 	int3 cell2 = convert_int3(floor(pos + (float3)0.5));
 
 	int3 cell_Ex = cell + (int3)1;

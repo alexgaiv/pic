@@ -107,13 +107,9 @@ int main()
 		FOR3(i, j, k, numCells)
 		{
 			int idx = (k * numCells.y + j) * numCells.x + i;
-			if (testData[idx] == 0)
-			{
-				passed = false;
-				cout << '(' << i << ", " << j << ", " << k << ") ";
-			}
+			if (testData[idx] != 1) passed = false;
 		}
-		cout << (passed ? "\npassed" : "\nfailed");
+		cout << (passed ? "passed" : "failed");
 		delete[] testData;
 
 		BuildPlotEx(grid.Ex, grid, "plot/ex.bmp");

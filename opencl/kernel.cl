@@ -2,10 +2,11 @@
 #define M_PI 3.14159265358979323846f
 #endif
 
-#include "grid.h"
 #include "utils.h"
+#include "grid.h"
+#include "tests.h"
 
-void CopyToGlobal(struct Grid *grid, int3 cId, int3 cId_g);
+void CopyToGlobal(struct Grid *grid);
 
 kernel void main(
 	float3 vmin, float3 vmax, int3 numInnerCells,
@@ -19,86 +20,14 @@ kernel void main(
 	local float *Jx, local float *Jy, local float *Jz,
 	global int *test)
 {
-	// ensemble size
-	int3 ls = (int3)(get_local_size(0), get_local_size(1), get_local_size(2));
+	struct WorkItemInfo wi;
+	initWorkItemInfo(&wi);
 
-	// total number of cells
-	int3 gs = (int3)(get_global_size(0), get_global_size(1), get_global_size(2));
-
-	// ensemble id
-	int3 eId = (int3)(get_group_id(0), get_group_id(1), get_group_id(2));
-
-	// local cell id
-	int3 cId = (int3)(get_local_id(0), get_local_id(1), get_local_id(2));
-
-	// global cell id
-	int3 cId_g = eId * ls + cId;
-
-	struct Grid grid = createGrid(
-		ls, gs, eId,
-		vmin, vmax, numInnerCells,
+	struct Grid grid;
+	initGrid(
+		&grid, &wi, vmin, vmax, numInnerCells,
 		Ex, Ey, Ez, Bx, By, Bz, Jx, Jy, Jz,
 		Ex_g, Ey_g, Ez_g, Bx_g, By_g, Bz_g, Jx_g, Jy_g, Jz_g);
-
-	float3 cellSize = grid.cellSize;
-	float x = vmin.x + (cId_g.x + 0.5) * cellSize.x;
-	//float E = 1111 * cos(2 * M_PI * x);
-
-	int4 i = idx4(cId + (int3)1, grid.Ex.size);
-	Ex[i.x] = x;
-	Ex[i.y] = x;
-	Ex[i.z] = x;
-	Ex[i.w] = x;
-
-	//*/
-	if (cId.x == 0)
-	{
-		float x = vmin.x + (cId_g.x - 0.5) * cellSize.x;
-		//float E = 1111 * cos(2 * M_PI * x);
-		int4 i = idx4(cId + (int3)(0, 1, 1), grid.Ex.size);
-		Ex[i.x] = x;
-		Ex[i.y] = x;
-		Ex[i.z] = x;
-		Ex[i.w] = x;
-	}
-	else if (cId.x == ls.x - 1)
-	{
-		float x = vmin.x + (cId_g.x + 1.5) * cellSize.x;
-		//float E = 1111 * cos(2 * M_PI * x);
-		int4 i = idx4(cId + (int3)(2, 1, 1), grid.Ex.size);
-		Ex[i.x] = x;
-		Ex[i.y] = x;
-		Ex[i.z] = x;
-		Ex[i.w] = x;
-	}
-
-	if (cId.y == 0)
-	{
-		int4 i = idx4(cId + (int3)(1, 0, 1), grid.Ex.size);
-		Ex[i.x] = x;
-		Ex[i.z] = x;
-
-	}
-	else if (cId.y == ls.y - 1)
-	{
-		int4 i = idx4(cId + (int3)(1, 2, 1), grid.Ex.size);
-		Ex[i.y] = x;
-		Ex[i.w] = x;
-	}
-
-	if (cId.z == 0)
-	{
-		int4 i = idx4(cId + (int3)(1, 1, 0), grid.Ex.size);
-		Ex[i.x] = x;
-		Ex[i.y] = x;
-	}
-	else if (cId.z == ls.z - 1)
-	{
-		int4 i = idx4(cId + (int3)(1, 1, 2), grid.Ex.size);
-		Ex[i.z] = x;
-		Ex[i.w] = x;
-	}
-	//*/
 
 	/*float x1 = vmin.x + cId_g.x * cellSize.x;
 	float x2 = x1 + cellSize.x;
@@ -109,17 +38,17 @@ kernel void main(
 	Bx[j] = B1;
 	Bx[j + 1] = B2;*/
 
-	barrier(CLK_LOCAL_MEM_FENCE);
+	//barrier(CLK_LOCAL_MEM_FENCE);
 
-	float3 p = (convert_float3(cId_g) + (float3)0.3) * cellSize;
-	struct FieldPoint f = grid_InterpolateField(&grid, p, cId);
-	test[idx(cId_g, gs)] = fabs(f.E.x - p.x) < 0.0001 ? 1 : 0;
-
-	CopyToGlobal(&grid, cId, cId_g);
+	TestGrid(&grid, test);
+	CopyToGlobal(&grid);
 }
 
-void CopyToGlobal(struct Grid *grid, int3 cId, int3 cId_g)
+void CopyToGlobal(struct Grid *grid)
 {
+	int3 cId = grid->wi.cell_id;
+	int3 cId_g = grid->wi.global_cell_id;
+
 	int4 i1 = idx4(cId_g + (int3)1, grid->Ex.size_g);
 	int4 i2 = idx4(cId + (int3)1, grid->Ex.size);
 	grid->Ex.data_g[i1.x] = grid->Ex.data[i2.x];
@@ -138,7 +67,7 @@ void CopyToGlobal(struct Grid *grid, int3 cId, int3 cId_g)
 		grid->Ex.data_g[i1.z] = grid->Ex.data[i2.z];
 		grid->Ex.data_g[i1.w] = grid->Ex.data[i2.w];
 	}
-	else if (cId_g.x == grid->globalSize.x - 1)
+	else if (cId_g.x == grid->wi.global_size.x - 1)
 	{
 		int4 i1 = idx4(cId_g + (int3)(2, 1, 1), grid->Ex.size_g);
 		int4 i2 = idx4(cId + (int3)(2, 1, 1), grid->Ex.size);
@@ -157,7 +86,7 @@ void CopyToGlobal(struct Grid *grid, int3 cId, int3 cId_g)
 		grid->Ex.data_g[i1.x] = grid->Ex.data[i2.x];
 		grid->Ex.data_g[i1.z] = grid->Ex.data[i2.z];
 	}
-	else if (cId_g.y == grid->globalSize.y - 1)
+	else if (cId_g.y == grid->wi.global_size.y - 1)
 	{
 		int4 i1 = idx4(cId_g + (int3)(1, 2, 1), grid->Ex.size_g);
 		int4 i2 = idx4(cId + (int3)(1, 2, 1), grid->Ex.size);
@@ -174,7 +103,7 @@ void CopyToGlobal(struct Grid *grid, int3 cId, int3 cId_g)
 		grid->Ex.data_g[i1.x] = grid->Ex.data[i2.x];
 		grid->Ex.data_g[i1.y] = grid->Ex.data[i2.y];
 	}
-	else if (cId_g.z == grid->globalSize.z - 1)
+	else if (cId_g.z == grid->wi.global_size.z - 1)
 	{
 		int4 i1 = idx4(cId_g + (int3)(1, 1, 2), grid->Ex.size_g);
 		int4 i2 = idx4(cId + (int3)(1, 1, 2), grid->Ex.size);
