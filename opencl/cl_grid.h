@@ -1,17 +1,18 @@
 #ifndef _CL_GRID_H_
 #define _CL_GRID_H_
 
-#include <CL\cl.hpp>
-#include "mathtypes.h"
+#include "common.h"
 #include "real_t.h"
+#include "mathtypes.h"
+#include "cl_descriptor.h"
 
 class cl_Lattice
 {
 public:
 	cl::Buffer buffer;
 
-	cl_Lattice(cl::CommandQueue &q, const Vector3i &size) :
-		q(q),
+	cl_Lattice(cl_Descriptor &cld, const Vector3i &size) :
+		q(cld.queue),
 		data(size.x * size.y * size.z),
 		size(size)
 	{
@@ -47,23 +48,26 @@ class cl_Grid
 private:
 	Vector3i numCells;
 public:
-	cl_Grid(cl::CommandQueue &q, const Vector3f &vmin, const Vector3f &vmax, const Vector3i &numInnerCells) :
+	cl_Grid(cl_Descriptor &cld, const Vector3f &vmin, const Vector3f &vmax,
+		    const Vector3i &numInnerCells, const Vector3i &groupNum) :
 		vmin(vmin),
 		vmax(vmax),
 		numCells(numInnerCells + Vector3i(2)),
 		cellSize((vmax - vmin) / numInnerCells),
+		groupNum(groupNum),
+		groupSize(numInnerCells / groupNum),
 
-		Ex(q, numCells + Vector3i(0, 1, 1)),
-		Ey(q, numCells + Vector3i(1, 0, 1)),
-		Ez(q, numCells + Vector3i(1, 1, 0)),
+		Ex(cld, numCells + Vector3i(0, 1, 1)),
+		Ey(cld, numCells + Vector3i(1, 0, 1)),
+		Ez(cld, numCells + Vector3i(1, 1, 0)),
 
-		Bx(q, numCells + Vector3i(1, 0, 0)),
-		By(q, numCells + Vector3i(0, 1, 0)),
-		Bz(q, numCells + Vector3i(0, 0, 1)),
+		Bx(cld, numCells + Vector3i(1, 0, 0)),
+		By(cld, numCells + Vector3i(0, 1, 0)),
+		Bz(cld, numCells + Vector3i(0, 0, 1)),
 
-		Jx(q, numCells + Vector3i(0, 1, 1)),
-		Jy(q, numCells + Vector3i(1, 0, 1)),
-		Jz(q, numCells + Vector3i(1, 1, 0))
+		Jx(cld, numCells + Vector3i(0, 1, 1)),
+		Jy(cld, numCells + Vector3i(1, 0, 1)),
+		Jz(cld, numCells + Vector3i(1, 1, 0))
 	{ }
 
 	Vector3f GetMin() const { return vmin; }
@@ -71,6 +75,8 @@ public:
 	Vector3i GetNumCells() const { return numCells; }
 	Vector3i GetNumInnerCells() const { return numCells - Vector3i(2); }
 	Vector3f GetCellSize() const { return cellSize; }
+	Vector3i GetGroupNum() const { return groupNum; }
+	Vector3i GetGroupSize() const { return groupSize; }
 
 	cl_Lattice Ex, Ey, Ez;
 	cl_Lattice Bx, By, Bz;
@@ -79,6 +85,8 @@ public:
 private:
 	Vector3f vmin, vmax;
 	Vector3f cellSize;
+	Vector3i groupNum;
+	Vector3i groupSize;
 };
 
 #endif // _CL_GRID_H_

@@ -10,6 +10,7 @@ public:
 	ParticleMover() {
 		k = gamma = 0.0;
 	}
+
 	Particle MoveParticle(const Particle &particle, double dt, int numSteps, const YeeGrid &grid);
 private:
 	Vector3d E, B;

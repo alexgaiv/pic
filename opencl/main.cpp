@@ -1,16 +1,10 @@
-#define CL_USE_DEPRECATED_OPENCL_2_0_APIS
-#define __CL_ENABLE_EXCEPTIONS
-#define NOMINMAX
-
 #include "mgl_suppress_warnings.h"
-#include <Windows.h>
+#include "common.h"
 #include <stdlib.h>
 #include <iostream>
-#include <cl\cl.hpp>
 #include <mgl2\mgl.h>
-#include "mathtypes.h"
-#include "utils.h"
 #include "cl_grid.h"
+#include "tests.h"
 
 #pragma comment(lib, "Winmm.lib")
 
@@ -29,102 +23,19 @@ int main()
 		Context ctx(CL_DEVICE_TYPE_CPU);
 		cout << "done\n";
 
-		Device device = ctx.getInfo<CL_CONTEXT_DEVICES>()[0];
-		CommandQueue queue(ctx, device);
-		Program program = CreateProgramFromFile("kernel.cl", ctx);
-
-		try
-		{
-			cout << "building a program...";
-			program.build("-I cl");
-			cout << "done\n";
-			string log = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device);
-			if (log != "") OutputDebugStringA(log.c_str());
-		}
-		catch (const Error &e)
-		{
-			string log = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device);
-			OutputDebugStringA(log.c_str());
-			throw e;
-		}
-
-		cl_Grid grid(queue, Vector3f(0), Vector3f(1, 0.125, 0.125), Vector3i(64, 8, 8));
-		Vector3i groupNum(4, 4, 4);
-		Vector3i numCells = grid.GetNumInnerCells();
-		Vector3i groupSize = numCells / groupNum;
-
-		Kernel kernel(program, "main");
-		kernel.setArg(0, v2v(grid.GetMin()));
-		kernel.setArg(1, v2v(grid.GetMax()));
-		kernel.setArg(2, v2v(grid.GetNumInnerCells()));
-
-		kernel.setArg(3, grid.Ex.buffer);
-		kernel.setArg(4, grid.Ey.buffer);
-		kernel.setArg(5, grid.Ez.buffer);
-		kernel.setArg(6, grid.Bx.buffer);
-		kernel.setArg(7, grid.By.buffer);
-		kernel.setArg(8, grid.Bz.buffer);
-		kernel.setArg(9, grid.Jx.buffer);
-		kernel.setArg(10, grid.Jy.buffer);
-		kernel.setArg(11, grid.Jz.buffer);
-
-		Vector3i s = groupSize + Vector3i(2);
-		kernel.setArg(12, s.x * (s.y + 1) * (s.z + 1) * sizeof(real_t), NULL);
-		kernel.setArg(13, (s.x + 1) * s.y * (s.z + 1) * sizeof(real_t), NULL);
-		kernel.setArg(14, (s.x + 1) * (s.y + 1) * s.z * sizeof(real_t), NULL);
-
-		kernel.setArg(15, (s.x + 1) * s.y * s.z * sizeof(real_t), NULL);
-		kernel.setArg(16, s.x * (s.y + 1) * s.z * sizeof(real_t), NULL);
-		kernel.setArg(17, s.x * s.y * (s.z + 1) * sizeof(real_t), NULL);
-
-		kernel.setArg(18, s.x * (s.y + 1) * (s.z + 1) * sizeof(real_t), NULL);
-		kernel.setArg(19, (s.x + 1) * s.y * (s.z + 1) * sizeof(real_t), NULL);
-		kernel.setArg(20, (s.x + 1) * (s.y + 1) * s.z * sizeof(real_t), NULL);
-
-		int testSize = numCells.x * numCells.y * numCells.z;
-		cl::Buffer testMem(ctx, CL_MEM_WRITE_ONLY, testSize * sizeof(int));
-		int *testData = new int[testSize];
-
-		kernel.setArg(21, testMem);
-
-		int dt = timeGetTime();
-		queue.enqueueNDRangeKernel(kernel, NullRange,
-			NDRange(numCells.x, numCells.y, numCells.z),
-			NDRange(groupSize.x, groupSize.y, groupSize.z));
-
-		grid.Ex.ReadBuffer();
-		grid.Ey.ReadBuffer();
-		grid.Ez.ReadBuffer();
-		grid.Bx.ReadBuffer();
-		grid.By.ReadBuffer();
-		grid.Bz.ReadBuffer();
-		queue.enqueueReadBuffer(testMem, true, 0, testSize * sizeof(int), testData);
-
-		dt = timeGetTime() - dt;
-		cout << dt << "ms" << endl;
-
-		bool passed = true;
-		FOR3(i, j, k, numCells)
-		{
-			int idx = (k * numCells.y + j) * numCells.x + i;
-			if (testData[idx] != 1) passed = false;
-		}
-		cout << (passed ? "passed" : "failed");
-		delete[] testData;
-
-		BuildPlotEx(grid.Ex, grid, "plot/ex.bmp");
-		
-		queue.flush();
-		queue.finish();
+		cl_Descriptor cld(ctx);
+		TestGrid(cld);
 	}
 	catch (const Error &e)
 	{
 		cout << endl << e.what() << " failed, err=" << e.err();
 	}
-	
-	cout << "\nend";
-	getchar();
+
+	//BuildPlotEx(grid.Ex, grid, "plot/ex.bmp");
+
 	timeEndPeriod(1);
+
+	getchar();
 	return 0;
 }
 

@@ -23,7 +23,6 @@ Particle ParticleMover::MoveParticle(const Particle &particle, double dt, int nu
 	FieldPoint f = grid.InterpolateField(pt.coords);
 	E = f.E;
 	B = f.B;
-
 	k = pt.charge * dt / (2 * mc);
 	u = pt.momentum / mc;
 	gamma = sqrt(1 + u.Square());

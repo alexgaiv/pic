@@ -1,9 +1,8 @@
 #ifndef _UTILS_H_
 #define _UTILS_H_
 
-#define __CL_ENABLE_EXCEPTIONS
-
-#include <CL\cl.hpp>
+#include "common.h"
+#include "mathtypes.h"
 #include <fstream>
 
 #define FOR3(i, j, k, s) \
