@@ -197,7 +197,8 @@ void ColdPlasmaOscillations()
 
 int main()
 {
-	ColdPlasmaOscillations();
+	//ColdPlasmaOscillations();
+	TestBoris();
 
 	getchar();
 	return 0;

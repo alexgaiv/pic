@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <mgl2\mgl.h>
-#include "cl_grid.h"
+#include "pic_kernel.h"
 #include "tests.h"
 
 #pragma comment(lib, "Winmm.lib")
@@ -11,7 +11,37 @@
 using namespace cl;
 using namespace std;
 
+ostream &operator<<(ostream &os, const cl_float3 &v)
+{
+	os << "(" << v.x << ", " << v.y << ", " << v.z << ")";
+	return os;
+}
+
 void BuildPlotEx(const cl_Lattice &latt, const cl_Grid &grid, const char *filename);
+
+void TestBoris(cl_Descriptor &cld)
+{
+	cl_Grid grid(cld, Vector3f(0), Vector3f(1), Vector3i(16, 16, 16), Vector3i(4, 4, 4));
+	PicKernel kernel(cld, "cl/kernel.cl", grid, true);
+
+	cl_float2 err[2] = { };
+	cl_float3 rp[2];
+
+	cl::Buffer errMem(cld.ctx, CL_MEM_WRITE_ONLY, sizeof(err));
+	cl::Buffer rpMem(cld.ctx, CL_MEM_WRITE_ONLY, sizeof(rp));
+	kernel.AddArg(errMem);
+	kernel.AddArg(rpMem);
+
+	kernel.Run();
+
+	cld.queue.enqueueReadBuffer(errMem, true, 0, sizeof(err), err);
+	cld.queue.enqueueReadBuffer(rpMem, true, 0, sizeof(rp), rp);
+
+	cout << "r = " << rp[0] << ", p = " << rp[1] << endl;
+
+	cout << "r_error_abs = " << err[0].x << ", p_error_abs = " << err[1].x << endl;
+	cout << "r_error_rel = " << err[0].y << ", p_error_rel = " << err[1].y << "\n\n";
+}
 
 int main()
 {
@@ -24,7 +54,7 @@ int main()
 		cout << "done\n";
 
 		cl_Descriptor cld(ctx);
-		TestGrid(cld);
+		TestBoris(cld);
 	}
 	catch (const Error &e)
 	{

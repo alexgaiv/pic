@@ -12,6 +12,6 @@ struct Particle
 	float mass;
 	float charge;
 	float factor;
-}
+};
 
 #endif // _PARTICLE_H_
