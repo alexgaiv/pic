@@ -37,7 +37,7 @@ void initField(
 	field->size_g = size_g;
 }
 
-double field_Interpolate(struct Field *field, int3 cell, float3 coords)
+float field_Interpolate(struct Field *field, int3 cell, float3 coords)
 {
 	int4 i = idx4(cell, field->size);
 
@@ -45,13 +45,13 @@ double field_Interpolate(struct Field *field, int3 cell, float3 coords)
 	float3 c_inv = (float3)1.0 - c;
 
 	local float *data = field->data;
-	double c00 = data[i.x] * c_inv.x + data[i.x + 1] * c.x;
-	double c01 = data[i.y] * c_inv.x + data[i.y + 1] * c.x;
-	double c10 = data[i.z] * c_inv.x + data[i.z + 1] * c.x;
-	double c11 = data[i.w] * c_inv.x + data[i.w + 1] * c.x;
+	float c00 = data[i.x] * c_inv.x + data[i.x + 1] * c.x;
+	float c01 = data[i.y] * c_inv.x + data[i.y + 1] * c.x;
+	float c10 = data[i.z] * c_inv.x + data[i.z + 1] * c.x;
+	float c11 = data[i.w] * c_inv.x + data[i.w + 1] * c.x;
 
-	double c0 = c00 * c_inv.y + c10 * c.y;
-	double c1 = c01 * c_inv.y + c11 * c.y;
+	float c0 = c00 * c_inv.y + c10 * c.y;
+	float c1 = c01 * c_inv.y + c11 * c.y;
 
 	return c0 * c_inv.z + c1 * c.z;
 }

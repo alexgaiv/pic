@@ -20,7 +20,7 @@ int main()
 	try
 	{
 		cout << "init context...";
-		Context ctx(CL_DEVICE_TYPE_CPU);
+		Context ctx(CL_DEVICE_TYPE_GPU);
 		cout << "done\n";
 
 		cl_Descriptor cld(ctx);

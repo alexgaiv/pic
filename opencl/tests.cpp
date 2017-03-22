@@ -118,9 +118,9 @@ void TestBoris(cl_Descriptor &cld)
 	cld.queue.enqueueReadBuffer(buffers[3], true, 0, memSize, p_abs_plot);
 
 	BuildErrPlot("plot/boris/test1-1.bmp", "Test 1 (Coords)",
-		r_rel_plot, r_abs_plot, numIters, (float)startN, (float)maxN, 1 / 1.1f, 1.1f);
+		r_rel_plot, r_abs_plot, numIters, (float)startN, (float)maxN, 1.0f , 1.0f);
 	BuildErrPlot("plot/boris/test1-2.bmp", "Test 1 (Momentum)",
-		p_rel_plot, p_abs_plot, numIters, (float)startN, (float)maxN, 0.0f, 2.0f);
+		p_rel_plot, p_abs_plot, numIters, (float)startN, (float)maxN, 0.999f, 1.0f);
 
 	cld.queue.enqueueReadBuffer(buffers[4], true, 0, memSize, r_rel_plot);
 	cld.queue.enqueueReadBuffer(buffers[5], true, 0, memSize, r_abs_plot);
