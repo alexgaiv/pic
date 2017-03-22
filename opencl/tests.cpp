@@ -1,9 +1,42 @@
 #include "tests.h"
 #include "pic_kernel.h"
+#include "mgl_suppress_warnings.h"
+#include <mgl2\mgl.h>
 #include <iostream>
 
 using namespace std;
 using namespace cl;
+
+void BuildErrSubPlot(mglGraph *gr, const char *title, const char *legend, const char *color,
+	float *data, int dataSize, float x_min, float x_max, float k_min, float k_max)
+{
+	mglData y;
+
+	gr->Title(title);
+	gr->ClearLegend();
+	gr->AddLegend(legend, color);
+	gr->SetRanges(x_min, x_max, data[dataSize - 1] * k_min, data[0] * k_max);
+	gr->Label('x', "steps");
+	gr->Label('y', "error");
+	gr->Axis();
+	gr->Legend();
+	y.Set(data, dataSize);
+	gr->Plot(y, color);
+}
+
+void BuildErrPlot(const char *filename, const char *title, float *data1, float *data2,
+	int dataSize, float x_min, float x_max, float k_min, float k_max)
+{
+	mglGraph gr;
+
+	gr.SetSize(1500, 600);
+	gr.SubPlot(2, 1, 0);
+	BuildErrSubPlot(&gr, title, "relative error", "b", data1, dataSize, x_min, x_max, k_min, k_max);
+	gr.SubPlot(2, 1, 1);
+	BuildErrSubPlot(&gr, title, "absolute error", "g", data2, dataSize, x_min, x_max, k_min, k_max);
+	gr.WriteBMP(filename);
+	gr.ClearFrame();
+}
 
 void TestGrid(cl_Descriptor &cld)
 {
@@ -47,4 +80,55 @@ void TestGrid(cl_Descriptor &cld)
 	}
 	delete[] testData;
 	cout << "grid test: " << (passed ? "passed" : "failed");
+}
+
+void TestBoris(cl_Descriptor &cld)
+{
+	cl_Grid grid(cld, Vector3f(0), Vector3f(1), Vector3i(16, 8, 8), Vector3i(4, 4, 4));
+	PicKernel kernel(cld, "cl/test_boris.cl", grid, true);
+
+	const int startN = 100;
+	const int dN = 50;
+	const int numIters = 50;
+
+	int maxN = dN * numIters;
+	int memSize = numIters * sizeof(float);
+
+	float r_rel_plot[numIters] = { };
+	float r_abs_plot[numIters] = { };
+	float p_rel_plot[numIters] = { };
+	float p_abs_plot[numIters] = { };
+
+	cl::Buffer buffers[8];
+
+	kernel.AddArg(startN);
+	kernel.AddArg(dN);
+	kernel.AddArg(numIters);
+
+	for (int i = 0; i < 8; i++) {
+		buffers[i] = cl::Buffer(cld.ctx, CL_MEM_WRITE_ONLY, memSize);
+		kernel.AddArg(buffers[i]);
+	}
+
+	kernel.Run();
+
+	cld.queue.enqueueReadBuffer(buffers[0], true, 0, memSize, r_rel_plot);
+	cld.queue.enqueueReadBuffer(buffers[1], true, 0, memSize, r_abs_plot);
+	cld.queue.enqueueReadBuffer(buffers[2], true, 0, memSize, p_rel_plot);
+	cld.queue.enqueueReadBuffer(buffers[3], true, 0, memSize, p_abs_plot);
+
+	BuildErrPlot("plot/boris/test1-1.bmp", "Test 1 (Coords)",
+		r_rel_plot, r_abs_plot, numIters, (float)startN, (float)maxN, 1 / 1.1f, 1.1f);
+	BuildErrPlot("plot/boris/test1-2.bmp", "Test 1 (Momentum)",
+		p_rel_plot, p_abs_plot, numIters, (float)startN, (float)maxN, 0.0f, 2.0f);
+
+	cld.queue.enqueueReadBuffer(buffers[4], true, 0, memSize, r_rel_plot);
+	cld.queue.enqueueReadBuffer(buffers[5], true, 0, memSize, r_abs_plot);
+	cld.queue.enqueueReadBuffer(buffers[6], true, 0, memSize, p_rel_plot);
+	cld.queue.enqueueReadBuffer(buffers[7], true, 0, memSize, p_abs_plot);
+
+	BuildErrPlot("plot/boris/test2-1.bmp", "Test 2 (Coords)",
+		r_rel_plot, r_abs_plot, numIters, (float)startN, (float)maxN, 1 / 1.1f, 1.1f);
+	BuildErrPlot("plot/boris/test2-2.bmp", "Test 2 (Momentum)",
+		p_rel_plot, p_abs_plot, numIters, (float)startN, (float)maxN, 0.0f, 2.0f);
 }

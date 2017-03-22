@@ -2,6 +2,8 @@
 #define _TESTS_H_
 
 #include "utils.h"
+#include "particle.h"
+#include "particle_mover.h"
 #include "grid.h"
 
 struct ErrorStruct
@@ -18,6 +20,7 @@ struct CoordsMomentumError
 
 void SetEx(struct Grid *grid, float val)
 {
+	int3 ls = grid->wi.local_size;
 	int3 cId = grid->wi.cell_id;
 	local float *Ex = grid->Ex.data;
 
@@ -35,7 +38,7 @@ void SetEx(struct Grid *grid, float val)
 		Ex[i.z] = val;
 		Ex[i.w] = val;
 	}
-	else if (cId.x == grid->wi.local_size.x - 1)
+	else if (cId.x == ls.x - 1)
 	{
 		int4 i = idx4(cId + (int3)(2, 1, 1), grid->Ex.size);
 		Ex[i.x] = val;
@@ -50,7 +53,7 @@ void SetEx(struct Grid *grid, float val)
 		Ex[i.x] = val;
 		Ex[i.z] = val;
 	}
-	else if (cId.y == grid->wi.local_size.y - 1)
+	else if (cId.y == ls.y - 1)
 	{
 		int4 i = idx4(cId + (int3)(1, 2, 1), grid->Ex.size);
 		Ex[i.y] = val;
@@ -63,7 +66,7 @@ void SetEx(struct Grid *grid, float val)
 		Ex[i.x] = val;
 		Ex[i.y] = val;
 	}
-	else if (cId.z == grid->wi.local_size.z - 1)
+	else if (cId.z == ls.z - 1)
 	{
 		int4 i = idx4(cId + (int3)(1, 1, 2), grid->Ex.size);
 		Ex[i.z] = val;
@@ -73,53 +76,64 @@ void SetEx(struct Grid *grid, float val)
 
 void SetBz(struct Grid *grid, float val)
 {
+	int3 ls = grid->wi.local_size;
 	int3 cId = grid->wi.cell_id;
 	local float *Bz = grid->Bz.data;
-
-	int j = idx(cId + (int3)1, grid->Bz.size);
-	int size_xy = grid->Bz.size.x * grid->Bz.size.y;
-	Bz[j] = val;
-	Bz[j + size_xy] = val;
+	
+	int4 i = idx4(cId + (int3)1, grid->Bz.size);
+	Bz[i.x] = val;
+	Bz[i.z] = val;
 
 	if (cId.x == 0)
 	{
-		int j = idx(cId + (int3)(0, 1, 1), grid->Bz.size);
-		Bz[j] = val;
-		Bz[j + size_xy] = val;
+		int4 i = idx4(cId + (int3)(0, 1, 1), grid->Bz.size);
+		Bz[i.x] = val;
+		Bz[i.z] = val;
 	}
-	else if (cId.x == grid->wi.local_size.x - 1)
+	else if (cId.x == ls.x - 1)
 	{
-		int j = idx(cId + (int3)(2, 1, 1), grid->Bz.size);
-		Bz[j] = val;
-		Bz[j + size_xy] = val;
+		int4 i = idx4(cId + (int3)(2, 1, 1), grid->Bz.size);
+		Bz[i.x] = val;
+		Bz[i.z] = val;
 	}
 
 	if (cId.y == 0)
 	{
-		int j = idx(cId + (int3)(1, 0, 1), grid->Bz.size);
-		Bz[j] = val;
-		Bz[j + size_xy] = val;
+		int4 i = idx4(cId + (int3)(1, 0, 1), grid->Bz.size);
+		Bz[i.x] = val;
+		Bz[i.z] = val;
 	}
-	else if (cId.y == grid->wi.local_size.y - 1)
+	else if (cId.y == ls.y - 1)
 	{
-		int j = idx(cId + (int3)(1, 2, 1), grid->Bz.size);
-		Bz[j] = val;
-		Bz[j + size_xy] = val;
+		int4 i = idx4(cId + (int3)(1, 2, 1), grid->Bz.size);
+		Bz[i.x] = val;
+		Bz[i.z] = val;
 	}
 
 	if (cId.z == 0)
 	{
-		int j = idx(cId + (int3)(1, 1, 0), grid->Bz.size);
-		Bz[j] = val;
+		int i = idx(cId + (int3)(1, 1, 0), grid->Bz.size);
+		Bz[i] = val;
 	}
-	else if (cId.z == grid->wi.local_size.z - 1)
+	else if (cId.z == ls.z - 1)
 	{
-		int j = idx(cId + (int3)(1, 1, 2), grid->Bz.size);
-		Bz[j] = val;
+		int i = idx(cId + (int3)(1, 1, 2), grid->Bz.size);
+		Bz[i] = val;
+	}
+
+	if ((cId.x == 0 || cId.x == ls.x - 1) && (cId.y == 0 || cId.y == ls.y - 1))
+	{
+		int dx = cId.x == 0 ? 0 : 2;
+		int dy = cId.y == 0 ? 0 : 2;
+		int3 delta = (int3)(dx, dy, 1);
+
+		int4 i = idx4(cId + delta, grid->Bz.size);
+		Bz[i.x] = val;
+		Bz[i.z] = val;
 	}
 }
 
-struct CoordsMomentumError TestBoris_1(struct Grid *grid, int steps, struct Particle *pt)
+struct CoordsMomentumError TestBoris_1(struct Grid *grid, int steps, float E0)
 {
 	struct CoordsMomentumError err;
 	struct ErrorStruct *r_error = &err.r, *p_error = &err.p;
@@ -131,10 +145,6 @@ struct CoordsMomentumError TestBoris_1(struct Grid *grid, int steps, struct Part
 	p.momentum = (float3)0;
 
 	const float mc = p.mass * c;
-	const float E0 = 43.0;
-
-	SetEx(grid, E0);
-
 	float dt = mc / (p.charge * E0 * steps);
 
 	MoveParticle2(&p, grid, dt, steps);
@@ -148,19 +158,16 @@ struct CoordsMomentumError TestBoris_1(struct Grid *grid, int steps, struct Part
 	r_error->rel = r_error->abs / length(r_theor);
 	p_error->rel = p_error->abs / length(p_theor);
 
-	*pt = p;
-
 	return err;
 }
 
-struct CoordsMomentumError TestBoris_2(struct Grid *grid, int steps, struct Particle *pt)
+struct CoordsMomentumError TestBoris_2(struct Grid *grid, int steps, float B0)
 {
 	struct CoordsMomentumError err;
 	struct ErrorStruct *r_error = &err.r, *p_error = &err.p;
 
 	const float mc = electronMass * c;
 	const float p0 = 5.0;
-	const float B0 = 57.0;
 
 	struct Particle p;
 	p.mass = electronMass;
@@ -168,8 +175,6 @@ struct CoordsMomentumError TestBoris_2(struct Grid *grid, int steps, struct Part
 	p.coords = (float3)0;
 	p.momentum = (float3)(p0, 0, 0);
 	
-	SetBz(grid, B0);
-
 	float dt = M_PI * mc / (fabs(p.charge) * B0 * steps) * sqrt(1 + pow(p0 / mc, 2));
 
 	MoveParticle2(&p, grid, dt, steps);
@@ -182,9 +187,59 @@ struct CoordsMomentumError TestBoris_2(struct Grid *grid, int steps, struct Part
 	r_error->rel = r_error->abs / length(r_theor);
 	p_error->rel = p_error->abs / length(p_theor);
 
-	*pt = p;
-
 	return err;
+}
+
+void TestBoris(
+	struct Grid *grid,
+	int startN, int dN, int numIterations,
+	global float *r_rel_test1,
+	global float *r_abs_test1,
+	global float *p_rel_test1,
+	global float *p_abs_test1,
+
+	global float *r_rel_test2,
+	global float *r_abs_test2,
+	global float *p_rel_test2,
+	global float *p_abs_test2)
+{
+	const float E0 = 43.0;
+	const float B0 = 57.0;
+
+	SetEx(grid, E0);
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	int3 cId_g = grid->wi.global_cell_id;
+	if (cId_g.x == 0 && cId_g.y == 0 && cId_g.z == 0)
+	{
+		int N = startN;
+
+		for (int i = 0; i < 50; i++, N += dN)
+		{
+			struct CoordsMomentumError err = TestBoris_1(grid, N, E0);
+			r_rel_test1[i] = err.r.rel;
+			r_abs_test1[i] = err.r.abs;
+			p_rel_test1[i] = err.p.rel;
+			p_abs_test1[i] = err.p.abs;
+		}
+	}
+
+	SetEx(grid, 0);
+	SetBz(grid, B0);
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	if (cId_g.x == 0 && cId_g.y == 0 && cId_g.z == 0)
+	{
+		int N = startN;
+		for (int i = 0; i < numIterations; i++, N += dN)
+		{
+			struct CoordsMomentumError err = TestBoris_2(grid, N, B0);
+			r_rel_test2[i] = err.r.rel;
+			r_abs_test2[i] = err.r.abs;
+			p_rel_test2[i] = err.p.rel;
+			p_abs_test2[i] = err.p.abs;
+		}
+	}
 }
 
 void TestGrid(struct Grid *grid, global int *result)

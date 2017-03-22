@@ -15,9 +15,7 @@ kernel void main(
 
 	local float *Ex, local float *Ey, local float *Ez,
 	local float *Bx, local float *By, local float *Bz,
-	local float *Jx, local float *Jy, local float *Jz,
-	global float2 *err,
-	global float3 *rp)
+	local float *Jx, local float *Jy, local float *Jz)
 {
 	struct WorkItemInfo wi;
 	initWorkItemInfo(&wi);
@@ -28,29 +26,12 @@ kernel void main(
 		Ex, Ey, Ez, Bx, By, Bz, Jx, Jy, Jz,
 		Ex_g, Ey_g, Ez_g, Bx_g, By_g, Bz_g, Jx_g, Jy_g, Jz_g);
 
-
-	int3 cId = wi.global_cell_id;
-	if (cId.x == 0 && cId.y == 0 && cId.z == 0)
-	{
-		struct Particle p;
-		struct CoordsMomentumError e = TestBoris_2(&grid, 100, &p);
-		err[0].x = e.r.abs;
-		err[0].y = e.r.rel;
-		err[1].x = e.p.abs;
-		err[1].y = e.p.rel;
-
-		rp[0] = p.coords;
-		rp[1] = p.momentum;
-	}
-
-	//barrier(CLK_LOCAL_MEM_FENCE);
 	
-	//CopyEx(&grid);
-	//CopyBz(&grid);
 }
 
 void CopyEx(struct Grid *grid)
 {
+	int3 gs = grid->wi.global_size;
 	int3 cId = grid->wi.cell_id;
 	int3 cId_g = grid->wi.global_cell_id;
 
@@ -70,7 +51,7 @@ void CopyEx(struct Grid *grid)
 		grid->Ex.data_g[i1.z] = grid->Ex.data[i2.z];
 		grid->Ex.data_g[i1.w] = grid->Ex.data[i2.w];
 	}
-	else if (cId_g.x == grid->wi.global_size.x - 1)
+	else if (cId_g.x == gs.x - 1)
 	{
 		int4 i1 = idx4(cId_g + (int3)(2, 1, 1), grid->Ex.size_g);
 		int4 i2 = idx4(cId + (int3)(2, 1, 1), grid->Ex.size);
@@ -87,7 +68,7 @@ void CopyEx(struct Grid *grid)
 		grid->Ex.data_g[i1.x] = grid->Ex.data[i2.x];
 		grid->Ex.data_g[i1.z] = grid->Ex.data[i2.z];
 	}
-	else if (cId_g.y == grid->wi.global_size.y - 1)
+	else if (cId_g.y == gs.y - 1)
 	{
 		int4 i1 = idx4(cId_g + (int3)(1, 2, 1), grid->Ex.size_g);
 		int4 i2 = idx4(cId + (int3)(1, 2, 1), grid->Ex.size);
@@ -101,7 +82,7 @@ void CopyEx(struct Grid *grid)
 		grid->Ex.data_g[i1.x] = grid->Ex.data[i2.x];
 		grid->Ex.data_g[i1.y] = grid->Ex.data[i2.y];
 	}
-	else if (cId_g.z == grid->wi.global_size.z - 1)
+	else if (cId_g.z == gs.z - 1)
 	{
 		int4 i1 = idx4(cId_g + (int3)(1, 1, 2), grid->Ex.size_g);
 		int4 i2 = idx4(cId + (int3)(1, 1, 2), grid->Ex.size);
@@ -112,6 +93,7 @@ void CopyEx(struct Grid *grid)
 
 void CopyBz(struct Grid *grid)
 {
+	int3 gs = grid->wi.global_size;
 	int3 cId = grid->wi.cell_id;
 	int3 cId_g = grid->wi.global_cell_id;
 
@@ -127,7 +109,7 @@ void CopyBz(struct Grid *grid)
 		grid->Bz.data_g[i1.x] = grid->Bz.data[i2.x];
 		grid->Bz.data_g[i1.z] = grid->Bz.data[i2.z];
 	}
-	else if (cId_g.x == grid->wi.global_size.x - 1)
+	else if (cId_g.x == gs.x - 1)
 	{
 		int4 i1 = idx4(cId_g + (int3)(2, 1, 1), grid->Bz.size_g);
 		int4 i2 = idx4(cId + (int3)(2, 1, 1), grid->Bz.size);
@@ -142,7 +124,7 @@ void CopyBz(struct Grid *grid)
 		grid->Bz.data_g[i1.x] = grid->Bz.data[i2.x];
 		grid->Bz.data_g[i1.z] = grid->Bz.data[i2.z];
 	}
-	else if (cId_g.y == grid->wi.global_size.y - 1)
+	else if (cId_g.y == gs.y - 1)
 	{
 		int4 i1 = idx4(cId_g + (int3)(1, 2, 1), grid->Bz.size_g);
 		int4 i2 = idx4(cId + (int3)(1, 2, 1), grid->Bz.size);
@@ -156,10 +138,22 @@ void CopyBz(struct Grid *grid)
 		int i2 = idx(cId + (int3)(1, 1, 0), grid->Bz.size);
 		grid->Bz.data_g[i1] = grid->Bz.data[i2];
 	}
-	else if (cId_g.z == grid->wi.global_size.z - 1)
+	else if (cId_g.z == gs.z - 1)
 	{
 		int i1 = idx(cId_g + (int3)(1, 1, 2), grid->Bz.size_g);
 		int i2 = idx(cId + (int3)(1, 1, 2), grid->Bz.size);
 		grid->Bz.data_g[i1] = grid->Bz.data[i2];
+	}
+
+	if ((cId_g.x == 0 || cId_g.x == gs.x - 1) && (cId_g.y == 0 || cId_g.y == gs.y - 1))
+	{
+		int dx = cId_g.x == 0 ? 0 : 2;
+		int dy = cId_g.y == 0 ? 0 : 2;
+		int3 delta = (int3)(dx, dy, 1);
+
+		int4 i1 = idx4(cId_g + delta, grid->Bz.size_g);
+		int4 i2 = idx4(cId + delta, grid->Bz.size);
+		grid->Bz.data_g[i1.x] = grid->Bz.data[i2.x];
+		grid->Bz.data_g[i1.z] = grid->Bz.data[i2.z];
 	}
 }

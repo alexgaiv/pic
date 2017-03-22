@@ -4,5 +4,6 @@
 #include "cl_descriptor.h"
 
 void TestGrid(cl_Descriptor &cld);
+void TestBoris(cl_Descriptor &cld);
 
 #endif
