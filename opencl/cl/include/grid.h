@@ -2,6 +2,7 @@
 #define _GRID_H_
 
 #include "utils.h"
+#include "particle.h"
 
 constant float3 shift_EJx = (float3)(0.5, 1, 1);
 constant float3 shift_EJy = (float3)(1, 0.5, 1);
@@ -40,7 +41,6 @@ void initField(
 float field_Interpolate(struct Field *field, int3 cell, float3 coords)
 {
 	int4 i = idx4(cell, field->size);
-
 	float3 c = coords - convert_float3(cell);
 	float3 c_inv = (float3)1.0 - c;
 
@@ -56,6 +56,24 @@ float field_Interpolate(struct Field *field, int3 cell, float3 coords)
 	return c0 * c_inv.z + c1 * c.z;
 }
 
+void field_Deposit(struct Field *field, int3 cell, float3 coords, float value)
+{
+	int4 i = idx4(cell, field->size);
+	float3 c = coords - convert_float3(cell);
+	float3 c_inv = (float3)1.0 - c;
+
+	local float *data = field->data;
+
+	AtomicAdd_f(&data[i.x], c_inv.x * c_inv.y * c_inv.z * value);
+	/*data[i.y]
+	data[i.z]
+	data[i.w]
+	data[i.x + 1]
+	data[i.y + 1]
+	data[i.z + 1]
+	data[i.w + 1]*/
+}
+
 struct Grid
 {
 	struct WorkItemInfo wi;
@@ -65,6 +83,8 @@ struct Grid
 	struct Field Ex, Ey, Ez;
 	struct Field Bx, By, Bz;
 	struct Field Jx, Jy, Jz;
+
+	float invCellVolume;
 };
 
 void initGrid(
@@ -83,6 +103,7 @@ void initGrid(
 	grid->vmin = vmin;
 	grid->vmax = vmax;
 	grid->cellSize = (vmax - vmin) / convert_float3(numInnerCells);
+	grid->invCellVolume = 1.0 / (grid->cellSize.x * grid->cellSize.y * grid->cellSize.z);
 	grid->wi = *wi;
 	
 	int3 ls = wi->local_size;
@@ -116,7 +137,7 @@ void initGrid(
 struct FieldPoint grid_InterpolateField(struct Grid *grid, float3 coords)
 {
 	float3 pos = (coords - grid->vmin) / grid->cellSize -
-		convert_float3(grid->wi.group_id * grid->wi.local_size);
+		convert_float3(grid->wi.group_offset);
 	int3 cell = grid->wi.cell_id;
 	int3 cell2 = convert_int3(floor(pos + (float3)0.5));
 
@@ -145,6 +166,26 @@ struct FieldPoint grid_InterpolateField(struct Grid *grid, float3 coords)
 			field_Interpolate(&grid->Bz, cell_Bz, pos + shift_Bz))
 	};
 	return f;
+}
+
+void grid_DepositCurrents(struct Grid *grid, struct Particle *pt)
+{
+	float3 j = pt->factor * pt->charge * particle_Velocity(pt) * grid->invCellVolume;
+
+	float3 pos = (pt->coords - grid->vmin) / grid->cellSize - 
+		convert_float3(grid->wi.group_offset);
+	int3 cell2 = convert_int3(floor(pos + (float3)0.5));
+
+	int3 cell_Jx = grid->wi.cell_id + (int3)1;
+	int3 cell_Jy = cell_Jx;
+	int3 cell_Jz = cell_Jx;
+	cell_Jx.x = cell2.x;
+	cell_Jy.y = cell2.y;
+	cell_Jz.z = cell2.z;
+
+	field_Deposit(&grid->Jx, cell_Jx, pos + shift_EJx, j.x);
+	field_Deposit(&grid->Jy, cell_Jy, pos + shift_EJy, j.y);
+	field_Deposit(&grid->Jz, cell_Jz, pos + shift_EJz, j.z);
 }
 
 #endif // _GRID_H_

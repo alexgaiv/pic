@@ -3,6 +3,7 @@
 #include "mgl_suppress_warnings.h"
 #include <mgl2\mgl.h>
 #include <iostream>
+#include <fstream>
 
 using namespace std;
 using namespace cl;
@@ -117,10 +118,23 @@ void TestBoris(cl_Descriptor &cld)
 	cld.queue.enqueueReadBuffer(buffers[2], true, 0, memSize, p_rel_plot);
 	cld.queue.enqueueReadBuffer(buffers[3], true, 0, memSize, p_abs_plot);
 
+	float p_abs[numIters] = { };
+	ifstream file("1.bin", ios::binary);
+	file.read((char *)p_abs, numIters * sizeof(float));
+
+	int n = 0;
+	for (int i = 0; i < numIters; i++) {
+		if (p_abs[i] != p_abs_plot[i]) n++;
+	}
+	if (n != 0) __debugbreak();
+
+	//ofstream fout("1.bin", ios::binary);
+	//fout.write((char *)p_abs_plot, sizeof(float)*numIters);
+
 	BuildErrPlot("plot/boris/test1-1.bmp", "Test 1 (Coords)",
-		r_rel_plot, r_abs_plot, numIters, (float)startN, (float)maxN, 1.0f , 1.0f);
+		r_rel_plot, r_abs_plot, numIters, (float)startN, (float)maxN, 0.1f, 1.0f);
 	BuildErrPlot("plot/boris/test1-2.bmp", "Test 1 (Momentum)",
-		p_rel_plot, p_abs_plot, numIters, (float)startN, (float)maxN, 0.999f, 1.0f);
+		p_rel_plot, p_abs_plot, numIters, (float)startN, (float)maxN, 0.99f, 1.0f);
 
 	cld.queue.enqueueReadBuffer(buffers[4], true, 0, memSize, r_rel_plot);
 	cld.queue.enqueueReadBuffer(buffers[5], true, 0, memSize, r_abs_plot);
@@ -128,7 +142,7 @@ void TestBoris(cl_Descriptor &cld)
 	cld.queue.enqueueReadBuffer(buffers[7], true, 0, memSize, p_abs_plot);
 
 	BuildErrPlot("plot/boris/test2-1.bmp", "Test 2 (Coords)",
-		r_rel_plot, r_abs_plot, numIters, (float)startN, (float)maxN, 1 / 1.1f, 1.1f);
+		r_rel_plot, r_abs_plot, numIters, (float)startN, (float)maxN, 1.0f, 1.0f);
 	BuildErrPlot("plot/boris/test2-2.bmp", "Test 2 (Momentum)",
-		p_rel_plot, p_abs_plot, numIters, (float)startN, (float)maxN, 0.0f, 2.0f);
+		p_rel_plot, p_abs_plot, numIters, (float)startN, (float)maxN, 1.0f, 1.0f);
 }

@@ -5,6 +5,7 @@
 #include "particle.h"
 #include "particle_mover.h"
 #include "grid.h"
+#include "init_fields.h"
 
 struct ErrorStruct
 {
@@ -17,121 +18,6 @@ struct CoordsMomentumError
 	struct ErrorStruct r;
 	struct ErrorStruct p;
 };
-
-void SetEx(struct Grid *grid, float val)
-{
-	int3 ls = grid->wi.local_size;
-	int3 cId = grid->wi.cell_id;
-	local float *Ex = grid->Ex.data;
-
-	int4 i = idx4(cId + (int3)1, grid->Ex.size);
-	Ex[i.x] = val;
-	Ex[i.y] = val;
-	Ex[i.z] = val;
-	Ex[i.w] = val;
-
-	if (cId.x == 0)
-	{
-		int4 i = idx4(cId + (int3)(0, 1, 1), grid->Ex.size);
-		Ex[i.x] = val;
-		Ex[i.y] = val;
-		Ex[i.z] = val;
-		Ex[i.w] = val;
-	}
-	else if (cId.x == ls.x - 1)
-	{
-		int4 i = idx4(cId + (int3)(2, 1, 1), grid->Ex.size);
-		Ex[i.x] = val;
-		Ex[i.y] = val;
-		Ex[i.z] = val;
-		Ex[i.w] = val;
-	}
-
-	if (cId.y == 0)
-	{
-		int4 i = idx4(cId + (int3)(1, 0, 1), grid->Ex.size);
-		Ex[i.x] = val;
-		Ex[i.z] = val;
-	}
-	else if (cId.y == ls.y - 1)
-	{
-		int4 i = idx4(cId + (int3)(1, 2, 1), grid->Ex.size);
-		Ex[i.y] = val;
-		Ex[i.w] = val;
-	}
-
-	if (cId.z == 0)
-	{
-		int4 i = idx4(cId + (int3)(1, 1, 0), grid->Ex.size);
-		Ex[i.x] = val;
-		Ex[i.y] = val;
-	}
-	else if (cId.z == ls.z - 1)
-	{
-		int4 i = idx4(cId + (int3)(1, 1, 2), grid->Ex.size);
-		Ex[i.z] = val;
-		Ex[i.w] = val;
-	}
-}
-
-void SetBz(struct Grid *grid, float val)
-{
-	int3 ls = grid->wi.local_size;
-	int3 cId = grid->wi.cell_id;
-	local float *Bz = grid->Bz.data;
-	
-	int4 i = idx4(cId + (int3)1, grid->Bz.size);
-	Bz[i.x] = val;
-	Bz[i.z] = val;
-
-	if (cId.x == 0)
-	{
-		int4 i = idx4(cId + (int3)(0, 1, 1), grid->Bz.size);
-		Bz[i.x] = val;
-		Bz[i.z] = val;
-	}
-	else if (cId.x == ls.x - 1)
-	{
-		int4 i = idx4(cId + (int3)(2, 1, 1), grid->Bz.size);
-		Bz[i.x] = val;
-		Bz[i.z] = val;
-	}
-
-	if (cId.y == 0)
-	{
-		int4 i = idx4(cId + (int3)(1, 0, 1), grid->Bz.size);
-		Bz[i.x] = val;
-		Bz[i.z] = val;
-	}
-	else if (cId.y == ls.y - 1)
-	{
-		int4 i = idx4(cId + (int3)(1, 2, 1), grid->Bz.size);
-		Bz[i.x] = val;
-		Bz[i.z] = val;
-	}
-
-	if (cId.z == 0)
-	{
-		int i = idx(cId + (int3)(1, 1, 0), grid->Bz.size);
-		Bz[i] = val;
-	}
-	else if (cId.z == ls.z - 1)
-	{
-		int i = idx(cId + (int3)(1, 1, 2), grid->Bz.size);
-		Bz[i] = val;
-	}
-
-	if ((cId.x == 0 || cId.x == ls.x - 1) && (cId.y == 0 || cId.y == ls.y - 1))
-	{
-		int dx = cId.x == 0 ? 0 : 2;
-		int dy = cId.y == 0 ? 0 : 2;
-		int3 delta = (int3)(dx, dy, 1);
-
-		int4 i = idx4(cId + delta, grid->Bz.size);
-		Bz[i.x] = val;
-		Bz[i.z] = val;
-	}
-}
 
 struct CoordsMomentumError TestBoris_1(struct Grid *grid, int steps, float E0)
 {
@@ -167,20 +53,20 @@ struct CoordsMomentumError TestBoris_2(struct Grid *grid, int steps, float B0)
 	struct ErrorStruct *r_error = &err.r, *p_error = &err.p;
 
 	const float mc = electronMass * c;
-	const float p0 = 5.0;
+	const float p0 = 5.0f;
 
 	struct Particle p;
 	p.mass = electronMass;
 	p.charge = electronCharge;
-	p.coords = (float3)0;
-	p.momentum = (float3)(p0, 0, 0);
+	p.coords = (float3)0.0f;
+	p.momentum = (float3)(p0, 0.0f, 0.0f);
 	
-	float dt = M_PI * mc / (fabs(p.charge) * B0 * steps) * sqrt(1 + pow(p0 / mc, 2));
+	float dt = M_PI * mc / (fabs(p.charge) * B0 * (float)steps) * sqrt(1.0f + pow(p0 / mc, 2.0f));
 
 	MoveParticle2(&p, grid, dt, steps);
 
-	float3 r_theor = (float3)(0, -2 * p0 * c / (p.charge * B0), 0);
-	float3 p_theor = (float3)(-p0, 0, 0);
+	float3 r_theor = (float3)(0.0f, -2.0f * p0 * c / (p.charge * B0), 0.0f);
+	float3 p_theor = (float3)(-p0, 0.0f, 0.0f);
 
 	r_error->abs = length(p.coords - r_theor);
 	p_error->abs = length(p.momentum - p_theor);
@@ -207,14 +93,18 @@ void TestBoris(
 	const float B0 = 57.0;
 
 	SetEx(grid, E0);
+	SetEy(grid, 0.0);
+	SetEz(grid, 0.0);
+	SetBx(grid, E0);
+	SetBy(grid, 0.0);
+	SetBz(grid, 0.0);
 	barrier(CLK_LOCAL_MEM_FENCE);
 
 	int3 cId_g = grid->wi.global_cell_id;
 	if (cId_g.x == 0 && cId_g.y == 0 && cId_g.z == 0)
 	{
 		int N = startN;
-
-		for (int i = 0; i < 50; i++, N += dN)
+		for (int i = 0; i < numIterations; i++, N += dN)
 		{
 			struct CoordsMomentumError err = TestBoris_1(grid, N, E0);
 			r_rel_test1[i] = err.r.rel;
