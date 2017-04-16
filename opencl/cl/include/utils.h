@@ -27,9 +27,29 @@ void initWorkItemInfo(struct WorkItemInfo *wi)
 	wi->global_cell_id = wi->group_offset + wi->cell_id;
 }
 
+float3 rand(uint2 *seed)
+{
+    const float3 maxInt = (float3)4294967296.0f;
+    uint x = (*seed).x * 17 + (*seed).y * 13123;
+    (*seed).x = (x<<13) ^ x;
+    (*seed).y ^= (x<<7);
+
+    uint3 tmp = (uint3)
+    ( (x * (x * x * 15731 + 74323) + 871483),
+      (x * (x * x * 13734 + 37828) + 234234),
+      (x * (x * x * 11687 + 26461) + 137589));
+
+    return convert_float3(tmp) / maxInt;
+}
+
 inline int idx(int3 c, int3 s)
 {
 	return (c.z * s.y + c.y) * s.x + c.x;
+}
+
+inline int idx_(int i, int j, int k, int3 s)
+{
+	return (k * s.y + j) * s.x + i;
 }
 
 inline int4 idx4(int3 c, int3 s)
@@ -40,26 +60,6 @@ inline int4 idx4(int3 c, int3 s)
 	i.z = i.x + s.x * s.y;               // (c.x, c.y, c.z + 1)
 	i.w = i.z + s.x;                     // (c.x, c.y + 1, c.z + 1)
 	return i;
-}
-
-inline void AtomicAdd_f(volatile local float *source, const float operand)
-{
-    union {
-        unsigned int intVal;
-        float floatVal;
-    } newVal;
-
-    union {
-        unsigned int intVal;
-        float floatVal;
-    } prevVal;
-
-    do {
-        prevVal.floatVal = *source;
-        newVal.floatVal = prevVal.floatVal + operand;
-    } while (atomic_cmpxchg(
-    	(volatile local unsigned int *)source,
-    	prevVal.intVal, newVal.intVal) != prevVal.intVal);
 }
 
 #endif // _UTILS_H_

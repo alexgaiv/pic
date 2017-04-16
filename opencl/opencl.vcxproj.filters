@@ -13,6 +13,12 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="cl">
+      <UniqueIdentifier>{2f4b5e83-9619-4084-8f4f-e970c752e5ab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cl\include">
+      <UniqueIdentifier>{de03314d-962f-4872-aeb6-fca87d8c701b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="utils.h">
@@ -39,6 +45,9 @@
     <ClInclude Include="tests.h">
       <Filter>Заголовочные файлы</Filter>
     </ClInclude>
+    <ClInclude Include="..\pic\grid.h">
+      <Filter>Заголовочные файлы</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -50,5 +59,37 @@
     <ClCompile Include="tests.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
+    <ClCompile Include="..\pic\grid.cpp">
+      <Filter>Файлы исходного кода</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="cl\test_boris.cl">
+      <Filter>cl</Filter>
+    </None>
+    <None Include="cl\test_grid.cl">
+      <Filter>cl</Filter>
+    </None>
+    <None Include="cl\kernel.cl">
+      <Filter>cl</Filter>
+    </None>
+    <None Include="cl\include\grid.h">
+      <Filter>cl\include</Filter>
+    </None>
+    <None Include="cl\include\init_fields.h">
+      <Filter>cl\include</Filter>
+    </None>
+    <None Include="cl\include\particle.h">
+      <Filter>cl\include</Filter>
+    </None>
+    <None Include="cl\include\particle_mover.h">
+      <Filter>cl\include</Filter>
+    </None>
+    <None Include="cl\include\tests.h">
+      <Filter>cl\include</Filter>
+    </None>
+    <None Include="cl\include\utils.h">
+      <Filter>cl\include</Filter>
+    </None>
   </ItemGroup>
 </Project>

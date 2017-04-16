@@ -22,7 +22,6 @@ struct Field
 {
 	local float *data;
 	int3 size;
-
 	global float *data_g;
 	int3 size_g;
 };
@@ -56,22 +55,22 @@ float field_Interpolate(struct Field *field, int3 cell, float3 coords)
 	return c0 * c_inv.z + c1 * c.z;
 }
 
-void field_Deposit(struct Field *field, int3 cell, float3 coords, float value)
+void field_Deposit(struct Field *field, int offset, int3 cell, float3 coords, float value)
 {
 	int4 i = idx4(cell, field->size);
 	float3 c = coords - convert_float3(cell);
 	float3 c_inv = (float3)1.0 - c;
 
-	local float *data = field->data;
+	local float *data = field->data + offset;
 
-	AtomicAdd_f(&data[i.x], c_inv.x * c_inv.y * c_inv.z * value);
-	/*data[i.y]
-	data[i.z]
-	data[i.w]
-	data[i.x + 1]
-	data[i.y + 1]
-	data[i.z + 1]
-	data[i.w + 1]*/
+	data[i.x]     += 1;//c_inv.x * c_inv.y * c_inv.z * value;
+	data[i.y]     += 2;//c_inv.x * c_inv.y * c.z * value;
+	data[i.z]     += 3;//c_inv.x * c.y * c_inv.z * value;
+	data[i.w]     += 4;//c_inv.x * c.y * c.z * value;
+	data[i.x + 1] += 5;//c.x * c_inv.y * c_inv.z * value;
+	data[i.y + 1] += 6;//c.x * c_inv.y * c.z * value;
+	data[i.z + 1] += 7;//c.x * c.y * c_inv.z * value;
+	data[i.w + 1] += 8;//c.x * c.y * c.z * value;
 }
 
 struct Grid
@@ -83,6 +82,7 @@ struct Grid
 	struct Field Ex, Ey, Ez;
 	struct Field Bx, By, Bz;
 	struct Field Jx, Jy, Jz;
+	struct Field Jx_sum, Jy_sum, Jz_sum;
 
 	float invCellVolume;
 };
@@ -98,7 +98,9 @@ void initGrid(
 
 	global float *Ex_g, global float *Ey_g, global float *Ez_g,
 	global float *Bx_g, global float *By_g, global float *Bz_g,
-	global float *Jx_g, global float *Jy_g, global float *Jz_g)
+	global float *Jx_g, global float *Jy_g, global float *Jz_g,
+
+	local float *Jx_sum, local float *Jy_sum, local float *Jz_sum)
 {
 	grid->vmin = vmin;
 	grid->vmax = vmax;
@@ -129,9 +131,13 @@ void initGrid(
 	initField(&grid->Bx, Bx, sBx, Bx_g, sBx_g);
 	initField(&grid->By, By, sBy, By_g, sBy_g);
 	initField(&grid->Bz, Bz, sBz, Bz_g, sBz_g);
-	initField(&grid->Jz, Jz, sEz, Jz_g, sEz_g);
+	initField(&grid->Jx, Jx, sEx, Jx_g, sEx_g);
 	initField(&grid->Jy, Jy, sEy, Jy_g, sEy_g);
 	initField(&grid->Jz, Jz, sEz, Jz_g, sEz_g);
+
+	initField(&grid->Jx_sum, Jx_sum, (int3)(3, 2, 2), 0, (int3)0);
+	initField(&grid->Jy_sum, Jy_sum, (int3)(2, 3, 2), 0, (int3)0);
+	initField(&grid->Jz_sum, Jz_sum, (int3)(2, 2, 3), 0, (int3)0);
 }
 
 struct FieldPoint grid_InterpolateField(struct Grid *grid, float3 coords)
@@ -170,22 +176,20 @@ struct FieldPoint grid_InterpolateField(struct Grid *grid, float3 coords)
 
 void grid_DepositCurrents(struct Grid *grid, struct Particle *pt)
 {
-	float3 j = pt->factor * pt->charge * particle_Velocity(pt) * grid->invCellVolume;
+	int offset = 12*idx(grid->wi.cell_id + (int3)1, grid->wi.local_size + (int3)2);
 
+	//float3 j = pt->factor * pt->charge * particle_GetVelocity(pt) * grid->invCellVolume;
+	float3 j = pt->factor * pt->charge * 1.0 * grid->invCellVolume;
 	float3 pos = (pt->coords - grid->vmin) / grid->cellSize - 
-		convert_float3(grid->wi.group_offset);
+		convert_float3(grid->wi.global_cell_id);
 	int3 cell2 = convert_int3(floor(pos + (float3)0.5));
 
-	int3 cell_Jx = grid->wi.cell_id + (int3)1;
-	int3 cell_Jy = cell_Jx;
-	int3 cell_Jz = cell_Jx;
-	cell_Jx.x = cell2.x;
-	cell_Jy.y = cell2.y;
-	cell_Jz.z = cell2.z;
+	int3 cell_Jx = (int3)(cell2.x, 0, 0);
+	int3 cell_Jy = (int3)(0, cell2.y, 0);
+	int3 cell_Jz = (int3)(0, 0, cell2.z);
 
-	field_Deposit(&grid->Jx, cell_Jx, pos + shift_EJx, j.x);
-	field_Deposit(&grid->Jy, cell_Jy, pos + shift_EJy, j.y);
-	field_Deposit(&grid->Jz, cell_Jz, pos + shift_EJz, j.z);
+	field_Deposit(&grid->Jx_sum, offset, cell_Jx, pos + (float3)(0.5, 0.0, 0.0), j.x);
+	field_Deposit(&grid->Jy_sum, offset, cell_Jy, pos + (float3)(0.0, 0.5, 0.0), j.y);
+	field_Deposit(&grid->Jz_sum, offset, cell_Jz, pos + (float3)(0.0, 0.0, 0.5), j.z);
 }
-
 #endif // _GRID_H_

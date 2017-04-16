@@ -142,12 +142,20 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\pic\grid.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="pic_kernel.cpp" />
     <ClCompile Include="tests.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\pic\grid.h" />
     <ClInclude Include="..\pic\mathtypes.h" />
+    <None Include="cl\include\grid.h" />
+    <None Include="cl\include\init_fields.h" />
+    <None Include="cl\include\particle.h" />
+    <None Include="cl\include\particle_mover.h" />
+    <None Include="cl\include\tests.h" />
+    <None Include="cl\include\utils.h" />
     <ClInclude Include="cl_descriptor.h" />
     <ClInclude Include="cl_grid.h" />
     <ClInclude Include="common.h" />
@@ -155,6 +163,11 @@
     <ClInclude Include="real_t.h" />
     <ClInclude Include="tests.h" />
     <ClInclude Include="utils.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="cl\kernel.cl" />
+    <None Include="cl\test_boris.cl" />
+    <None Include="cl\test_grid.cl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

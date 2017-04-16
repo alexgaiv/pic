@@ -34,7 +34,8 @@ kernel void main(
 	initGrid(
 		&grid, &wi, vmin, vmax, numInnerCells,
 		Ex, Ey, Ez, Bx, By, Bz, Jx, Jy, Jz,
-		Ex_g, Ey_g, Ez_g, Bx_g, By_g, Bz_g, Jx_g, Jy_g, Jz_g);
+		Ex_g, Ey_g, Ez_g, Bx_g, By_g, Bz_g, Jx_g, Jy_g, Jz_g,
+		0, 0, 0);
 
 	TestBoris(&grid, startN, dN, numIterations,
 		r_rel_test1, r_abs_test1,

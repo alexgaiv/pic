@@ -2,6 +2,7 @@
 #define _MATH_TYPES_H_
 
 #include <math.h>
+#include <algorithm>
 
 template<class T>
 class Vector3

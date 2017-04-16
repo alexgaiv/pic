@@ -41,12 +41,8 @@ void BuildErrPlot(const char *filename, const char *title, float *data1, float *
 
 void TestGrid(cl_Descriptor &cld)
 {
-	const Vector3f vmin(0);
-	const Vector3f vmax(1, 0.125, 0.125);
-	const Vector3i numCells(64, 8, 8);
-	const Vector3i groupNum(4, 4, 4);
-
-	cl_Grid grid(cld, vmin, vmax, numCells, groupNum);
+	cl_Grid grid(cld, Vector3f(0), Vector3f(1, 0.125, 0.125), Vector3i(64, 8, 8), Vector3i(4, 4, 4));
+	const Vector3i numCells = grid.GetNumInnerCells();
 	const Vector3i groupSize = grid.GetGroupSize();
 
 	int testSize = numCells.x * numCells.y * numCells.z;
@@ -117,19 +113,6 @@ void TestBoris(cl_Descriptor &cld)
 	cld.queue.enqueueReadBuffer(buffers[1], true, 0, memSize, r_abs_plot);
 	cld.queue.enqueueReadBuffer(buffers[2], true, 0, memSize, p_rel_plot);
 	cld.queue.enqueueReadBuffer(buffers[3], true, 0, memSize, p_abs_plot);
-
-	float p_abs[numIters] = { };
-	ifstream file("1.bin", ios::binary);
-	file.read((char *)p_abs, numIters * sizeof(float));
-
-	int n = 0;
-	for (int i = 0; i < numIters; i++) {
-		if (p_abs[i] != p_abs_plot[i]) n++;
-	}
-	if (n != 0) __debugbreak();
-
-	//ofstream fout("1.bin", ios::binary);
-	//fout.write((char *)p_abs_plot, sizeof(float)*numIters);
 
 	BuildErrPlot("plot/boris/test1-1.bmp", "Test 1 (Coords)",
 		r_rel_plot, r_abs_plot, numIters, (float)startN, (float)maxN, 0.1f, 1.0f);

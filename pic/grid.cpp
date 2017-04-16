@@ -26,9 +26,9 @@ double Lattice::Interpolate(const Vector3i &cell, const Vector3d &coords) const
 void Lattice::Deposit(const Vector3i &cell, const Vector3d &coords, double value)
 {
 	int k1 = cell.z * size_xy + cell.y * size.x + cell.x; // (x, y, z)
-	int k2 = k1 + size_xy;                                // (x, y, z + 1)
-	int k3 = k1 + size.x;                                 // (x, y + 1, z)
-	int k4 = k3 + size_xy;                                // (x, y + 1, z + 1)
+	int k2 = k1 + size.x;                                 // (x, y + 1, z)
+	int k3 = k1 + size_xy;                                // (x, y, z + 1)
+	int k4 = k3 + size.x;                                 // (x, y + 1, z + 1)
 
 	Vector3d c = coords - cell;
 	Vector3d c_inv = Vector3d(1.0) - c;
@@ -36,14 +36,14 @@ void Lattice::Deposit(const Vector3i &cell, const Vector3d &coords, double value
 	Lattice &t = *this;
 	int i = cell.x, j = cell.y, k = cell.z;
 
-	data[k1]     += c_inv.x * c_inv.y * c_inv.z * value;
-	data[k2]     += c_inv.x * c_inv.y * c.z * value;
-	data[k3]     += c_inv.x * c.y * c_inv.z * value;
-	data[k4]     += c_inv.x * c.y * c.z * value;
-	data[k1 + 1] += c.x * c_inv.y * c_inv.z * value;
-	data[k2 + 1] += c.x * c_inv.y * c.z * value;
-	data[k3 + 1] += c.x * c.y * c_inv.z * value;
-	data[k4 + 1] += c.x * c.y * c.z * value;
+	data[k1]     += 1;//c_inv.x * c_inv.y * c_inv.z * value;
+	data[k2]     += 2;//c_inv.x * c_inv.y * c.z * value;
+	data[k3]     += 3;//c_inv.x * c.y * c_inv.z * value;
+	data[k4]     += 4;//c_inv.x * c.y * c.z * value;
+	data[k1 + 1] += 5;//c.x * c_inv.y * c_inv.z * value;
+	data[k2 + 1] += 6;//c.x * c_inv.y * c.z * value;
+	data[k3 + 1] += 7;//c.x * c.y * c_inv.z * value;
+	data[k4 + 1] += 8;//c.x * c.y * c.z * value;
 }
 
 YeeGrid::YeeGrid(const Vector3d &vmin, const Vector3d &vmax, const Vector3i &numInnerCells) :
@@ -113,7 +113,8 @@ FieldPoint YeeGrid::InterpolateField(const Vector3d &coords) const
 
 void YeeGrid::DepositCurrents(const Particle &pt)
 {
-	Vector3d j = pt.factor * pt.charge * pt.Velocity() * invCellVolume;
+	//Vector3d j = pt.factor * pt.charge * pt.Velocity() * invCellVolume;
+	Vector3d j = pt.factor * pt.charge * Vector3d(1.0) * invCellVolume;
 
 	Vector3d pos = (pt.coords - vmin) / cellSize;
 	Vector3i cell = floor(pos);

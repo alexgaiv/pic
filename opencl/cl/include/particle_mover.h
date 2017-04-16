@@ -37,11 +37,11 @@ void MoveParticle(struct Particle *pt, struct Grid *grid, float dt)
 	pm.E = f.E;
 	pm.B = f.B;
 	pm.k = pt->charge * dt / (2 * mc);
-	pm.u = pt->momentum / mc;
+	pm.u = pt->p;
 	pm.gamma = sqrt(1 + dot(pm.u, pm.u));
 
 	particleMover_Iteration(&pm, pt, dt);
-	pt->momentum = mc * pm.u;
+	pt->p = pm.u;
 }
 
 void MoveParticle2(struct Particle *pt, struct Grid *grid, float dt, int numSteps)
@@ -54,7 +54,7 @@ void MoveParticle2(struct Particle *pt, struct Grid *grid, float dt, int numStep
 	pm.E = f.E;
 	pm.B = f.B;
 	pm.k = pt->charge * dt / (2 * mc);
-	pm.u = pt->momentum / mc;
+	pm.u = pt->p;
 	pm.gamma = sqrt(1 + dot(pm.u, pm.u));
 
 	for (int i = 0; i < numSteps - 1; i++)
@@ -68,7 +68,7 @@ void MoveParticle2(struct Particle *pt, struct Grid *grid, float dt, int numStep
 	particleMover_Iteration(&pm, pt, dt);
 
 	pt->coords = coords;
-	pt->momentum = mc * pm.u;
+	pt->p = pm.u;
 }
 
 #endif // _PARTICLE_MOVER_H_

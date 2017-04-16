@@ -33,6 +33,8 @@ public:
 
 	void Run() {
 		cld.queue.enqueueNDRangeKernel(kernel, cl::NullRange, globalRange, localRange);
+		cld.queue.flush();
+		cld.queue.finish();
 	}
 private:
 	cl_Descriptor cld;

@@ -28,7 +28,7 @@ struct CoordsMomentumError TestBoris_1(struct Grid *grid, int steps, float E0)
 	p.mass = electronMass;
 	p.charge = electronCharge;
 	p.coords = (float3)0;
-	p.momentum = (float3)0;
+	particle_SetMomentum(&p, (float3)0);
 
 	const float mc = p.mass * c;
 	float dt = mc / (p.charge * E0 * steps);
@@ -40,7 +40,7 @@ struct CoordsMomentumError TestBoris_1(struct Grid *grid, int steps, float E0)
 	float3 p_theor = (float3)(mc, 0, 0);
 
 	r_error->abs = length(p.coords - r_theor);
-	p_error->abs = length(p.momentum - p_theor);
+	p_error->abs = length(particle_GetMomentum(&p) - p_theor);
 	r_error->rel = r_error->abs / length(r_theor);
 	p_error->rel = p_error->abs / length(p_theor);
 
@@ -53,23 +53,23 @@ struct CoordsMomentumError TestBoris_2(struct Grid *grid, int steps, float B0)
 	struct ErrorStruct *r_error = &err.r, *p_error = &err.p;
 
 	const float mc = electronMass * c;
-	const float p0 = 5.0f;
+	const float p0 = 5.0;
 
 	struct Particle p;
 	p.mass = electronMass;
 	p.charge = electronCharge;
-	p.coords = (float3)0.0f;
-	p.momentum = (float3)(p0, 0.0f, 0.0f);
+	p.coords = (float3)0.0;
+	particle_SetMomentum(&p, (float3)(p0, 0.0, 0.0));
 	
-	float dt = M_PI * mc / (fabs(p.charge) * B0 * (float)steps) * sqrt(1.0f + pow(p0 / mc, 2.0f));
+	float dt = M_PI * mc / (fabs(p.charge) * B0 * (float)steps) * sqrt(1.0 + pow(p0 / mc, 2.0f));
 
 	MoveParticle2(&p, grid, dt, steps);
 
-	float3 r_theor = (float3)(0.0f, -2.0f * p0 * c / (p.charge * B0), 0.0f);
-	float3 p_theor = (float3)(-p0, 0.0f, 0.0f);
+	float3 r_theor = (float3)(0.0, -2.0 * p0 * c / (p.charge * B0), 0.0);
+	float3 p_theor = (float3)(-p0, 0.0, 0.0);
 
 	r_error->abs = length(p.coords - r_theor);
-	p_error->abs = length(p.momentum - p_theor);
+	p_error->abs = length(particle_GetMomentum(&p) - p_theor);
 	r_error->rel = r_error->abs / length(r_theor);
 	p_error->rel = p_error->abs / length(p_theor);
 
