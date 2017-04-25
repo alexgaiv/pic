@@ -5,8 +5,10 @@
 #include <iostream>
 #include <fstream>
 
-using namespace std;
-using namespace cl;
+//using namespace std;
+//using namespace cl;
+using std::cout;
+using std::endl;
 
 void BuildErrSubPlot(mglGraph *gr, const char *title, const char *legend, const char *color,
 	float *data, int dataSize, float x_min, float x_max, float k_min, float k_max)

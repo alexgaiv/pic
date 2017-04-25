@@ -5,6 +5,7 @@
 #include <iostream>
 #include "real_t.h"
 #include "utils.h"
+#include "cl_buffer.h"
 #include "cl_grid.h"
 
 class PicKernel
@@ -22,13 +23,23 @@ public:
 
 	void Init(cl_Descriptor &cld, const char *filename, cl_Grid &grid, bool verbose);
 
-	template <class T>
+	template<class T>
 	void AddArg(T value) {
 		kernel.setArg(++lastArgIdx, value);
 	}
-
+	
 	void AddArg(::size_t size, void *argPtr) {
 		kernel.setArg(++lastArgIdx, size, argPtr);
+	}
+
+	template<class DataType>
+	void AddArg(const cl_Buffer<DataType> &cl_buffer) {
+		kernel.setArg(++lastArgIdx, cl_buffer.buffer);
+	}
+
+	template<class T>
+	void AddArgLocal(::size_t size) {
+		kernel.setArg(++lastArgIdx, size * sizeof(T), NULL);
 	}
 
 	void Run() {

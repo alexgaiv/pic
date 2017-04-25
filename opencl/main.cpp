@@ -2,18 +2,16 @@
 #include "common.h"
 #include <stdlib.h>
 #include <iostream>
-#include <mgl2\mgl.h>
 #include <time.h>
+#include <mgl2\mgl.h>
 #include <grid.h>
 #include "pic_kernel.h"
 #include "tests.h"
 
 #pragma comment(lib, "Winmm.lib")
 
-using namespace cl;
-using namespace std;
-
-void BuildPlotEx(const cl_Lattice &latt, const cl_Grid &grid, const char *filename);
+using std::cout;
+using std::endl;
 
 inline int idx(int i, int j, int k, const Vector3i &s) {
 	return (k * s.y + j) * s.x + i;
@@ -27,17 +25,69 @@ inline float frand() {
 	return f;
 }
 
+void ReduceJx(
+	const std::vector<float> &jx, const std::vector<float> &jy, const std::vector<float> &jz,
+	YeeGrid &grid)
+{
+	Vector3i jxSize(3, 2, 2);
+	Vector3i jySize(2, 3, 2);
+	Vector3i jzSize(2, 2, 3);
+
+	Vector3i nc = grid.GetNumInnerCells() + Vector3i(2);
+
+	FOR3_(i, j, k, nc)
+	{
+		float j1 = 0.0f;
+		float j2 = 0.0f;
+		float j3 = 0.0f;
+		float j4 = 0.0f;
+
+		for (int d = 0; d < 3; d++)
+		{
+			int d1 = i + d - 1;
+			int d2 = 2 - d;
+
+			j1 +=
+				jx[12 * idx(d1, j, k, nc) + idx(d2, 0, 0, jxSize)] +
+				jx[12 * idx(d1, j - 1, k, nc) + idx(d2, 1, 0, jxSize)] +
+				jx[12 * idx(d1, j, k - 1, nc) + idx(d2, 0, 1, jxSize)] +
+				jx[12 * idx(d1, j - 1, k - 1, nc) + idx(d2, 1, 1, jxSize)];
+
+			j2 +=
+				jx[12 * idx(d1, j, k, nc) + idx(d2, 1, 0, jxSize)] +
+				jx[12 * idx(d1, j + 1, k, nc) + idx(d2, 0, 0, jxSize)] +
+				jx[12 * idx(d1, j, k - 1, nc) + idx(d2, 1, 1, jxSize)] +
+				jx[12 * idx(d1, j + 1, k - 1, nc) + idx(d2, 0, 1, jxSize)];
+
+			j3 +=
+				jx[12 * idx(d1, j, k, nc) + idx(d2, 0, 1, jxSize)] +
+				jx[12 * idx(d1, j - 1, k, nc) + idx(d2, 1, 1, jxSize)] +
+				jx[12 * idx(d1, j, k + 1, nc) + idx(d2, 0, 0, jxSize)] +
+				jx[12 * idx(d1, j - 1, k + 1, nc) + idx(d2, 1, 0, jxSize)];
+
+			j4 +=
+				jx[12 * idx(d1, j, k, nc) + idx(d2, 1, 1, jxSize)] +
+				jx[12 * idx(d1, j + 1, k, nc) + idx(d2, 0, 1, jxSize)] +
+				jx[12 * idx(d1, j, k + 1, nc) + idx(d2, 1, 0, jxSize)] +
+				jx[12 * idx(d1, j + 1, k + 1, nc) + idx(d2, 0, 0, jxSize)];
+		}
+
+		grid.Jx(i, j, k) = j1;
+		grid.Jx(i, j + 1, k) = j2;
+		grid.Jx(i, j, k + 1) = j3;
+		grid.Jx(i, j + 1, k + 1) = j4;
+	}
+}
+
 int main()
 {
 	timeBeginPeriod(1);
-	
 	//srand((unsigned)time(NULL));
-	SetCurrentDirectory("C:\\Users\\HP\\Documents\\Visual Studio 2013\\Projects\\pic\\opencl");
 
 	try
 	{
 		cout << "init context...";
-		Context ctx(CL_DEVICE_TYPE_CPU);
+		cl::Context ctx(CL_DEVICE_TYPE_CPU);
 		cout << "done\n";
 
 		cl_Descriptor cld(ctx);
@@ -45,7 +95,7 @@ int main()
 		YeeGrid grid0(Vector3f(0), Vector3f(1), Vector3i(16, 8, 8));
 		YeeGrid grid1 = grid0;
 		cl_Grid grid(cld, Vector3f(0), Vector3f(1), Vector3i(16, 8, 8), Vector3i(4, 4, 4));
-		//cl_Grid grid(cld, Vector3f(0), Vector3f(1), Vector3i(1, 1, 1), Vector3i(1, 1, 1));
+
 		PicKernel kernel(cld, "cl/kernel.cl", grid, true);
 
 		Vector3f cellSize = grid.GetCellSize();
@@ -54,73 +104,67 @@ int main()
 		int totalNumCells = numCells.x * numCells.y * numCells.z;
 		int groupNumCells = groupSize.x * groupSize.y * groupSize.z;
 
-		cl_float3 *particles = new cl_float3[100 * totalNumCells];
-		memset(particles, 0, 100 * totalNumCells * sizeof(cl_float3));
+		const int particlesPerCell = 100;
+		const int numParticles = particlesPerCell * totalNumCells;
+		int j_localSize = 12 * (groupSize.x + 2) * (groupSize.y + 2) * (groupSize.z + 2);
+		int j_globalSize = 12 * (numCells.x + 2) * (numCells.y + 2) * (numCells.z + 2);
+
+		cl_Buffer<cl_float3> particlesBuffer(cld, CL_MEM_WRITE_ONLY, numParticles);
+		cl_Buffer<float> jxBuffer(cld, CL_MEM_WRITE_ONLY, j_globalSize);
+		cl_Buffer<float> jyBuffer(cld, CL_MEM_WRITE_ONLY, j_globalSize);
+		cl_Buffer<float> jzBuffer(cld, CL_MEM_WRITE_ONLY, j_globalSize);
+
+	 	std::vector<cl_float3> &particles = particlesBuffer.data;
+		std::vector<float> &jx = jxBuffer.data;
+		std::vector<float> &jy = jyBuffer.data;
+		std::vector<float> &jz = jzBuffer.data;
 
 		FOR3(i, j, k, numCells)
 		{
-			int offset = 100 * idx(i, j, k, numCells);
-			for (int p = 8; p < 100; p++)
-			{
-				float r = frand();
-				particles[offset + p] = v2v(grid.GetMin() +
-					(Vector3f(i, j, k) + Vector3f(r)) * cellSize);
-			}
+			Vector3f ijk((float)i, (float)j, (float)k);
+			int offset = particlesPerCell * idx(i, j, k, numCells);
 
-			particles[offset] = v2v(grid.GetMin() + (Vector3f(i, j, k) + Vector3f(0.1, 0.1, 0.1)) * cellSize);
-			particles[offset + 1] = v2v(grid.GetMin() + (Vector3f(i, j, k) + Vector3f(0.1, 0.9, 0.1)) * cellSize);
-			particles[offset + 2] = v2v(grid.GetMin() + (Vector3f(i, j, k) + Vector3f(0.1, 0.1, 0.9)) * cellSize);
-			particles[offset + 3] = v2v(grid.GetMin() + (Vector3f(i, j, k) + Vector3f(0.1, 0.9, 0.9)) * cellSize);
-			particles[offset + 4] = v2v(grid.GetMin() + (Vector3f(i, j, k) + Vector3f(0.9, 0.1, 0.1)) * cellSize);
-			particles[offset + 5] = v2v(grid.GetMin() + (Vector3f(i, j, k) + Vector3f(0.9, 0.9, 0.1)) * cellSize);
-			particles[offset + 6] = v2v(grid.GetMin() + (Vector3f(i, j, k) + Vector3f(0.9, 0.1, 0.9)) * cellSize);
-			particles[offset + 7] = v2v(grid.GetMin() + (Vector3f(i, j, k) + Vector3f(0.9, 0.9, 0.9)) * cellSize);
+			Vector3f v[8] = {
+				Vector3f(0.1f, 0.1f, 0.1f),
+				Vector3f(0.1f, 0.9f, 0.1f),
+				Vector3f(0.1f, 0.1f, 0.9f),
+				Vector3f(0.1f, 0.9f, 0.9f),
+				Vector3f(0.9f, 0.1f, 0.1f),
+				Vector3f(0.9f, 0.9f, 0.1f),
+				Vector3f(0.9f, 0.1f, 0.9f),
+				Vector3f(0.9f, 0.9f, 0.9f)
+			};
+
+			for (int k = 0; k < 8; k++)
+				particles[offset + k] = v2v(grid.GetMin() + (ijk + v[k]) * cellSize);
+
+			for (int p = 8; p < particlesPerCell; p++)
+			{
+				particles[offset + p] = v2v(grid.GetMin() +
+					(ijk + Vector3f(frand(), frand(), frand())) * cellSize);
+			}
 		}
 
-		int s1 = 12 * (groupSize.x + 2) * (groupSize.y + 2) * (groupSize.z + 2);
-		int s2 = 12 * (numCells.x + 2) * (numCells.y + 2) * (numCells.z + 2);
+		particlesBuffer.Write();
 
-		float *jx = new float[s2];
-		float *jy = new float[s2];
-		float *jz = new float[s2];
-		cl_uint2 seed = {rand(), rand()};
-
-		cl::Buffer jxMem(cld.ctx, CL_MEM_WRITE_ONLY, s2 * sizeof(float));
-		cl::Buffer jyMem(cld.ctx, CL_MEM_WRITE_ONLY, s2 * sizeof(float));
-		cl::Buffer jzMem(cld.ctx, CL_MEM_WRITE_ONLY, s2 * sizeof(float));
-		cl::Buffer particlesMem(cld.ctx, CL_MEM_WRITE_ONLY, 100 * totalNumCells * sizeof(cl_float3));
-
-		cld.queue.enqueueWriteBuffer(particlesMem, true, 0, 100 * totalNumCells * sizeof(cl_float3), particles);
-
-		kernel.AddArg(s1 * sizeof(float), NULL);
-		kernel.AddArg(s1 * sizeof(float), NULL);
-		kernel.AddArg(s1 * sizeof(float), NULL);
-		kernel.AddArg(jxMem);
-		kernel.AddArg(jyMem);
-		kernel.AddArg(jzMem);
-		kernel.AddArg(particlesMem);
-		kernel.AddArg(seed);
+		kernel.AddArgLocal<float>(j_localSize);
+		kernel.AddArgLocal<float>(j_localSize);
+		kernel.AddArgLocal<float>(j_localSize);
+		kernel.AddArg(jxBuffer);
+		kernel.AddArg(jyBuffer);
+		kernel.AddArg(jzBuffer);
+		kernel.AddArg(particlesBuffer);
 
 		kernel.Run();
 
-		cld.queue.enqueueReadBuffer(jxMem, true, 0, s2 * sizeof(float), jx);
-		cld.queue.enqueueReadBuffer(jyMem, true, 0, s2 * sizeof(float), jy);
-		cld.queue.enqueueReadBuffer(jzMem, true, 0, s2 * sizeof(float), jz);
+		jxBuffer.Read();
+		jyBuffer.Read();
+		jzBuffer.Read();
 		grid.Jx.ReadBuffer();
-
-		FOR3(i, j, k, grid.Jx.GetSize())
-		{
-			if (grid.Jx(i, j, k) == 6.0) __debugbreak();
-		}
 
 		Vector3i nc = numCells + Vector3i(2);
 		FOR3(i, j, k, nc)
 		{
-			for (int p = 0; p < 12; p++) {
-				if (jx[12 * idx(i, j, k, nc) + p] == 6.0f)
-					__debugbreak();
-			}
-
 			if (i == 0 || j == 0 || k == 0 ||
 				i == nc.x - 1 || j == nc.y - 1 || k == nc.z - 1)
 			{
@@ -129,88 +173,41 @@ int main()
 			}
 		}
 
-		Vector3i jxSize(3, 2, 2);
-		Vector3i jySize(2, 3, 2);
-		Vector3i jzSize(2, 2, 3);
+		ReduceJx(jx, jy, jz, grid0);
 
-		FOR3_(i, j, k, nc)
+		FOR3(i, j, k, numCells)
 		{
-			float j1 = 0.0f;
-			float j2 = 0.0f;
-			float j3 = 0.0f;
-			float j4 = 0.0f;
-
-			//if (i == 1 && j == 2 && k == 1) __debugbreak();
-			for (int d = 0; d < 3; d++)
+			int offset = particlesPerCell * idx(i, j, k, numCells);
+			for (int c = 0; c < particlesPerCell; c++)
 			{
-				int d1 = i + d - 1;
-				int d2 = 2 - d;
-
-				j1 +=
-					jx[12 * idx(d1, j, k, nc) + idx(d2, 0, 0, jxSize)] +
-					jx[12 * idx(d1, j - 1, k, nc) + idx(d2, 1, 0, jxSize)] +
-					jx[12 * idx(d1, j, k - 1, nc) + idx(d2, 0, 1, jxSize)] +
-					jx[12 * idx(d1, j - 1, k - 1, nc) + idx(d2, 1, 1, jxSize)];
-
-				j2 +=
-					jx[12 * idx(d1, j, k, nc) + idx(d2, 1, 0, jxSize)] +
-					jx[12 * idx(d1, j + 1, k, nc) + idx(d2, 0, 0, jxSize)] +
-					jx[12 * idx(d1, j, k - 1, nc) + idx(d2, 1, 1, jxSize)] +
-					jx[12 * idx(d1, j + 1, k - 1, nc) + idx(d2, 0, 1, jxSize)];
-
-				j3 +=
-					jx[12 * idx(d1, j, k, nc) + idx(d2, 0, 1, jxSize)] +
-					jx[12 * idx(d1, j - 1, k, nc) + idx(d2, 1, 1, jxSize)] +
-					jx[12 * idx(d1, j, k + 1, nc) + idx(d2, 0, 0, jxSize)] +
-					jx[12 * idx(d1, j - 1, k + 1, nc) + idx(d2, 1, 0, jxSize)];
-
-				j4 +=
-					jx[12 * idx(d1, j, k, nc) + idx(d2, 1, 1, jxSize)] +
-					jx[12 * idx(d1, j + 1, k, nc) + idx(d2, 0, 1, jxSize)] +
-					jx[12 * idx(d1, j, k + 1, nc) + idx(d2, 1, 0, jxSize)] +
-					jx[12 * idx(d1, j + 1, k + 1, nc) + idx(d2, 0, 0, jxSize)];
-			}
-
-			grid0.Jx(i, j, k) = j1;
-			grid0.Jx(i, j + 1, k) = j2;
-			grid0.Jx(i, j, k + 1) = j3;
-			grid0.Jx(i, j + 1, k + 1) = j4;
-		}
-
-		//FOR3(i, j, k, numCells)
-		{
-			//int offset = 100 * idx(i, j, k, numCells);
-			int offset = 100 * idx(0, 1, 0, numCells);
-			for (int t = 0; t < 1; t++)
-			{
-				cl_float4 coords = particles[offset + t];
+				cl_float4 coords = particles[offset + c];
 				Particle p;
 				p.coords = Vector3d(coords.x, coords.y, coords.z);
-				p.momentum = Vector3d(0.0f);
 				p.charge = electronCharge;
 				p.mass = electronMass;
 				p.factor = 1.0;
+
+				Vector3d velocity(1.0);
+				p.momentum = velocity / sqrt(c * c - velocity.Square()) * p.mass * c;
+
 				grid1.DepositCurrents(p);
 			}
 		}
 
-		FOR3_(i, j, k, grid0.Jx.GetSize())
+		FOR3_(i, j, k, grid1.Jx.GetSize())
 		{
-			float j1 = grid1.Jx(i, j, k);
-			float j2 = grid.Jx(i, j, k);
+			float j1 = (float)grid0.Jx(i, j, k);
+			float j2 = (float)grid1.Jx(i, j, k);
+
 			if (j1 == 0.0 && j2 == 0.0) continue;
+
 			double err = abs(j1 - j2) / abs(j2);
 			if (err > 0.0001) __debugbreak();
 		}
 
-		delete[] jx;
-		delete[] jy;
-		delete[] jz;
-		delete[] particles;
-
 		cout << "end";
 	}
-	catch (const Error &e)
+	catch (const cl::Error &e)
 	{
 		cout << endl << e.what() << " failed, err=" << e.err();
 	}
@@ -219,64 +216,4 @@ int main()
 
 	getchar();
 	return 0;
-}
-
-void BuildPlotEx(const cl_Lattice &latt, const cl_Grid &grid, const char *filename)
-{
-	Vector3f vmin = grid.GetMin();
-	Vector3f vmax = grid.GetMax();
-	Vector3f cs = grid.GetCellSize();
-
-	double *ex_plot = new double[latt.GetSize().x];
-	double **ex_dens = new double*[latt.GetSize().y];
-	for (int i = 0; i < latt.GetSize().y; i++)
-		ex_dens[i] = new double[latt.GetSize().x];
-
-	mglGraph gr;
-	mglData y;
-
-	Vector3d center = (vmin + vmax) / 2;
-
-	for (int ix = 0; ix < latt.GetSize().x; ix++) {
-		double x = vmin.x + (ix - 0.5) * cs.x;
-		Vector3i s = latt.GetSize();
-		ex_plot[ix] = latt(ix, s.y / 2, s.z / 2);
-	}
-
-	for (int ix = 0; ix < latt.GetSize().x; ix++) {
-		for (int iy = 0; iy < latt.GetSize().y; iy++) {
-			double x = vmin.x + (ix - 0.5) * cs.x;
-			double y = vmin.y + (iy - 1.0) * cs.y;
-			ex_dens[iy][ix] = latt(ix, iy, latt.GetSize().z / 2);
-		}
-	}
-
-	const double A = 1111;
-	gr.SetSize(1000, 401);
-	gr.SubPlot(2, 1, 0);
-	gr.SetOrigin(0, 0);
-	gr.SetRanges(vmin.x, vmax.x, -A, A);
-	gr.Label('x', "x");
-	gr.Label('y', "E_x");
-	gr.Axis();
-	y.Set(ex_plot, latt.GetSize().x);
-	gr.Plot(y);
-
-	gr.SubPlot(2, 1, 1);
-	gr.SetOrigin(0, 0);
-	gr.SetRanges(vmin.x, vmax.x, vmin.y, vmax.y, -A, A);
-	gr.Label('x', "x");
-	gr.Label('y', "y");
-	gr.Axis();
-	gr.Box();
-	gr.Colorbar();
-	y.Set(ex_dens, latt.GetSize().y, latt.GetSize().x);
-	gr.Dens(y);
-
-	gr.WriteBMP(filename);
-
-	delete[] ex_plot;
-	for (int i = 0; i < latt.GetSize().y; i++)
-		delete[] ex_dens[i];
-	delete[] ex_dens;
 }

@@ -30,15 +30,15 @@ void PicKernel::Init(cl_Descriptor &cld, const char *filename, cl_Grid &grid, bo
 	kernel.setArg(1, v2v(grid.GetMax()));
 	kernel.setArg(2, v2v(numCells));
 
-	kernel.setArg(3, grid.Ex.buffer);
-	kernel.setArg(4, grid.Ey.buffer);
-	kernel.setArg(5, grid.Ez.buffer);
-	kernel.setArg(6, grid.Bx.buffer);
-	kernel.setArg(7, grid.By.buffer);
-	kernel.setArg(8, grid.Bz.buffer);
-	kernel.setArg(9, grid.Jx.buffer);
-	kernel.setArg(10, grid.Jy.buffer);
-	kernel.setArg(11, grid.Jz.buffer);
+	kernel.setArg(3, grid.Ex.cl_buffer.buffer);
+	kernel.setArg(4, grid.Ey.cl_buffer.buffer);
+	kernel.setArg(5, grid.Ez.cl_buffer.buffer);
+	kernel.setArg(6, grid.Bx.cl_buffer.buffer);
+	kernel.setArg(7, grid.By.cl_buffer.buffer);
+	kernel.setArg(8, grid.Bz.cl_buffer.buffer);
+	kernel.setArg(9, grid.Jx.cl_buffer.buffer);
+	kernel.setArg(10, grid.Jy.cl_buffer.buffer);
+	kernel.setArg(11, grid.Jz.cl_buffer.buffer);
 
 	Vector3i s = groupSize + Vector3i(2);
 	kernel.setArg(12, s.x * (s.y + 1) * (s.z + 1) * sizeof(real_t), NULL);

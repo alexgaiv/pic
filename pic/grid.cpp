@@ -113,8 +113,7 @@ FieldPoint YeeGrid::InterpolateField(const Vector3d &coords) const
 
 void YeeGrid::DepositCurrents(const Particle &pt)
 {
-	//Vector3d j = pt.factor * pt.charge * pt.Velocity() * invCellVolume;
-	Vector3d j = pt.factor * pt.charge * Vector3d(1.0) * invCellVolume;
+	Vector3d j = pt.factor * pt.charge * pt.Velocity() * invCellVolume;
 
 	Vector3d pos = (pt.coords - vmin) / cellSize;
 	Vector3i cell = floor(pos);

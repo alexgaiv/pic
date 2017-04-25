@@ -5,26 +5,21 @@
 #include "real_t.h"
 #include "mathtypes.h"
 #include "cl_descriptor.h"
+#include "cl_buffer.h"
 
 class cl_Lattice
 {
 public:
-	cl::Buffer buffer;
+	cl_Buffer<real_t> cl_buffer;
 
 	cl_Lattice(cl_Descriptor &cld, const Vector3i &size) :
-		q(cld.queue),
-		data(size.x * size.y * size.z),
-		size(size)
-	{
-		cl::Context ctx = q.getInfo<CL_QUEUE_CONTEXT>();
-		std::size_t memSize = data.size() * sizeof(real_t);
-		buffer = cl::Buffer(ctx, CL_MEM_READ_WRITE, memSize);
-		q.enqueueWriteBuffer(buffer, true, 0, memSize, data.data());
-	}
+		cl_buffer(cl_Buffer<real_t>(cld, CL_MEM_READ_WRITE, size.x * size.y * size.z)),
+		size(size),
+		data(cl_buffer.data)
+	{ }
 
 	Vector3i GetSize() const { return size; }
-	std::vector<real_t> &GetData() { return data; }
-	const std::vector<real_t> &GetData() const { return data; }
+	void ReadBuffer() { cl_buffer.Read(); }
 
 	const real_t &operator()(int i, int j, int k) const {
 		return data[(k * size.y + j) * size.x + i];
@@ -32,15 +27,9 @@ public:
 	real_t &operator()(int i, int j, int k) {
 		return data[(k * size.y + j) * size.x + i];
 	}
-
-	void ReadBuffer()
-	{
-		q.enqueueReadBuffer(buffer, true, 0, data.size() * sizeof(real_t), data.data());
-	}
 private:
-	std::vector<real_t> data;
 	Vector3i size;
-	cl::CommandQueue q;
+	std::vector<real_t> &data;
 };
 
 class cl_Grid
@@ -49,7 +38,7 @@ private:
 	Vector3i numCells;
 public:
 	cl_Grid(cl_Descriptor &cld, const Vector3f &vmin, const Vector3f &vmax,
-		    const Vector3i &numInnerCells, const Vector3i &groupNum) :
+		const Vector3i &numInnerCells, const Vector3i &groupNum) :
 		vmin(vmin),
 		vmax(vmax),
 		numCells(numInnerCells + Vector3i(2)),

@@ -143,6 +143,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\pic\grid.cpp" />
+    <ClCompile Include="cl_buffer.h" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="pic_kernel.cpp" />
     <ClCompile Include="tests.cpp" />
