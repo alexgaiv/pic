@@ -26,32 +26,31 @@ void PicKernel::Init(cl_Descriptor &cld, const char *filename, cl_Grid &grid, bo
 	this->localRange = cl::NDRange(groupSize.x, groupSize.y, groupSize.z);
 	this->kernel = cl::Kernel(program, "main");
 
-	kernel.setArg(0, v2v(grid.GetMin()));
-	kernel.setArg(1, v2v(grid.GetMax()));
-	kernel.setArg(2, v2v(numCells));
-
-	kernel.setArg(3, grid.Ex.cl_buffer.buffer);
-	kernel.setArg(4, grid.Ey.cl_buffer.buffer);
-	kernel.setArg(5, grid.Ez.cl_buffer.buffer);
-	kernel.setArg(6, grid.Bx.cl_buffer.buffer);
-	kernel.setArg(7, grid.By.cl_buffer.buffer);
-	kernel.setArg(8, grid.Bz.cl_buffer.buffer);
-	kernel.setArg(9, grid.Jx.cl_buffer.buffer);
-	kernel.setArg(10, grid.Jy.cl_buffer.buffer);
-	kernel.setArg(11, grid.Jz.cl_buffer.buffer);
+	AddArg(v2v(grid.GetMin()));
+	AddArg(v2v(grid.GetMax()));
+          
+	AddArg(grid.Ex.cl_buffer);
+	AddArg(grid.Ey.cl_buffer);
+	AddArg(grid.Ez.cl_buffer);
+	AddArg(grid.Bx.cl_buffer);
+	AddArg(grid.By.cl_buffer);
+	AddArg(grid.Bz.cl_buffer);
+	AddArg(grid.Jx.cl_buffer);
+	AddArg(grid.Jy.cl_buffer);
+	AddArg(grid.Jz.cl_buffer);
 
 	Vector3i s = groupSize + Vector3i(2);
-	kernel.setArg(12, s.x * (s.y + 1) * (s.z + 1) * sizeof(real_t), NULL);
-	kernel.setArg(13, (s.x + 1) * s.y * (s.z + 1) * sizeof(real_t), NULL);
-	kernel.setArg(14, (s.x + 1) * (s.y + 1) * s.z * sizeof(real_t), NULL);
+	AddLocalBufferArg<real_t>(s.x * (s.y + 1) * (s.z + 1)); // Ex local
+	AddLocalBufferArg<real_t>((s.x + 1) * s.y * (s.z + 1)); // Ey local
+	AddLocalBufferArg<real_t>((s.x + 1) * (s.y + 1) * s.z); // Ez local
 
-	kernel.setArg(15, (s.x + 1) * s.y * s.z * sizeof(real_t), NULL);
-	kernel.setArg(16, s.x * (s.y + 1) * s.z * sizeof(real_t), NULL);
-	kernel.setArg(17, s.x * s.y * (s.z + 1) * sizeof(real_t), NULL);
+	AddLocalBufferArg<real_t>((s.x + 1) * s.y * s.z);       // Bx local
+	AddLocalBufferArg<real_t>(s.x * (s.y + 1) * s.z);       // By local
+	AddLocalBufferArg<real_t>(s.x * s.y * (s.z + 1));       // Bz local
 
-	kernel.setArg(18, s.x * (s.y + 1) * (s.z + 1) * sizeof(real_t), NULL);
-	kernel.setArg(19, (s.x + 1) * s.y * (s.z + 1) * sizeof(real_t), NULL);
-	kernel.setArg(20, (s.x + 1) * (s.y + 1) * s.z * sizeof(real_t), NULL);
+	AddLocalBufferArg<real_t>(s.x * (s.y + 1) * (s.z + 1)); // Jx local
+	AddLocalBufferArg<real_t>((s.x + 1) * s.y * (s.z + 1)); // Jy local
+	AddLocalBufferArg<real_t>((s.x + 1) * (s.y + 1) * s.z); // Jz local
 
 	lastArgIdx = 20;
 }

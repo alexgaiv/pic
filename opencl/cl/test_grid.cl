@@ -5,7 +5,7 @@
 void CopyToGlobal(struct Grid *grid);
 
 kernel void main(
-    float3 vmin, float3 vmax, int3 numInnerCells,
+    float3 vmin, float3 vmax,
 
     global float *Ex_g, global float *Ey_g, global float *Ez_g,
     global float *Bx_g, global float *By_g, global float *Bz_g,
@@ -21,10 +21,10 @@ kernel void main(
 
     struct Grid grid;
     initGrid(
-        &grid, &wi, vmin, vmax, numInnerCells,
+        &grid, &wi, vmin, vmax,
         Ex, Ey, Ez, Bx, By, Bz, Jx, Jy, Jz,
         Ex_g, Ey_g, Ez_g, Bx_g, By_g, Bz_g, Jx_g, Jy_g, Jz_g,
-        0, 0, 0);
+        0, 0, 0, 0, 0, 0);
 
     TestGrid(&grid, test);
     CopyToGlobal(&grid);

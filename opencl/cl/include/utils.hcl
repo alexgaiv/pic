@@ -15,6 +15,7 @@ struct WorkItemInfo
     int3 cell_id;
     int3 global_cell_id;
     int3 group_offset;
+    int3 num_groups;
 };
 
 void initWorkItemInfo(struct WorkItemInfo *wi)
@@ -23,6 +24,7 @@ void initWorkItemInfo(struct WorkItemInfo *wi)
     wi->global_size = (int3)(get_global_size(0), get_global_size(1), get_global_size(2));
     wi->group_id    = (int3)(get_group_id(0), get_group_id(1), get_group_id(2));
     wi->cell_id     = (int3)(get_local_id(0), get_local_id(1), get_local_id(2));
+    wi->num_groups  = (int3)(get_num_groups(0), get_num_groups(1), get_num_groups(2));
     wi->group_offset = wi->group_id * wi->local_size;
     wi->global_cell_id = wi->group_offset + wi->cell_id;
 }

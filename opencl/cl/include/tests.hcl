@@ -134,13 +134,13 @@ void TestBoris(
 
 void TestGrid(struct Grid *grid, global int *result)
 {
-    float3 cellSize = grid->cellSize;
+    float3 cell_size = grid->cell_size;
     float3 vmin = grid->vmin;
     int3 cId = grid->wi.cell_id;
     int3 cId_g = grid->wi.global_cell_id;
     local float *Ex = grid->Ex.data;
 
-    float x = vmin.x + (cId_g.x + 0.5) * cellSize.x;
+    float x = vmin.x + (cId_g.x + 0.5) * cell_size.x;
     int4 i = idx4(cId + (int3)1, grid->Ex.size);
     Ex[i.x] = x;
     Ex[i.y] = x;
@@ -149,7 +149,7 @@ void TestGrid(struct Grid *grid, global int *result)
 
     if (cId.x == 0)
     {
-        float x = vmin.x + (cId_g.x - 0.5) * cellSize.x;
+        float x = vmin.x + (cId_g.x - 0.5) * cell_size.x;
         int4 i = idx4(cId + (int3)(0, 1, 1), grid->Ex.size);
         Ex[i.x] = x;
         Ex[i.y] = x;
@@ -158,7 +158,7 @@ void TestGrid(struct Grid *grid, global int *result)
     }
     else if (cId.x == grid->wi.local_size.x - 1)
     {
-        float x = vmin.x + (cId_g.x + 1.5) * cellSize.x;
+        float x = vmin.x + (cId_g.x + 1.5) * cell_size.x;
         int4 i = idx4(cId + (int3)(2, 1, 1), grid->Ex.size);
         Ex[i.x] = x;
         Ex[i.y] = x;
@@ -194,7 +194,7 @@ void TestGrid(struct Grid *grid, global int *result)
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    float3 p = (convert_float3(cId_g) + (float3)0.3) * cellSize;
+    float3 p = (convert_float3(cId_g) + (float3)0.3) * cell_size;
     struct FieldPoint f = grid_InterpolateField(grid, p);
     result[idx(cId_g, grid->wi.global_size)] = fabs(f.E.x - p.x) < PRECISION ? 1 : 0;
 }

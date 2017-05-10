@@ -6,55 +6,55 @@
 
 void SetEx(struct Grid *grid, float val)
 {
-    int3 ls = grid->wi.local_size;
-    int3 cId = grid->wi.cell_id;
+    int3 local_size = grid->wi.local_size;
+    int3 cell_id = grid->wi.cell_id;
     local float *Ex = grid->Ex.data;
 
-    int4 i = idx4(cId + (int3)1, grid->Ex.size);
+    int4 i = idx4(cell_id + (int3)1, grid->Ex.size);
     Ex[i.x] = val;
     Ex[i.y] = val;
     Ex[i.z] = val;
     Ex[i.w] = val;
 
-    if (cId.x == 0)
+    if (cell_id.x == 0)
     {
-        int4 i = idx4(cId + (int3)(0, 1, 1), grid->Ex.size);
+        int4 i = idx4(cell_id + (int3)(0, 1, 1), grid->Ex.size);
         Ex[i.x] = val;
         Ex[i.y] = val;
         Ex[i.z] = val;
         Ex[i.w] = val;
     }
-    else if (cId.x == ls.x - 1)
+    else if (cell_id.x == local_size.x - 1)
     {
-        int4 i = idx4(cId + (int3)(2, 1, 1), grid->Ex.size);
+        int4 i = idx4(cell_id + (int3)(2, 1, 1), grid->Ex.size);
         Ex[i.x] = val;
         Ex[i.y] = val;
         Ex[i.z] = val;
         Ex[i.w] = val;
     }
 
-    if (cId.y == 0)
+    if (cell_id.y == 0)
     {
-        int4 i = idx4(cId + (int3)(1, 0, 1), grid->Ex.size);
+        int4 i = idx4(cell_id + (int3)(1, 0, 1), grid->Ex.size);
         Ex[i.x] = val;
         Ex[i.z] = val;
     }
-    else if (cId.y == ls.y - 1)
+    else if (cell_id.y == local_size.y - 1)
     {
-        int4 i = idx4(cId + (int3)(1, 2, 1), grid->Ex.size);
+        int4 i = idx4(cell_id + (int3)(1, 2, 1), grid->Ex.size);
         Ex[i.y] = val;
         Ex[i.w] = val;
     }
 
-    if (cId.z == 0)
+    if (cell_id.z == 0)
     {
-        int4 i = idx4(cId + (int3)(1, 1, 0), grid->Ex.size);
+        int4 i = idx4(cell_id + (int3)(1, 1, 0), grid->Ex.size);
         Ex[i.x] = val;
         Ex[i.y] = val;
     }
-    else if (cId.z == ls.z - 1)
+    else if (cell_id.z == local_size.z - 1)
     {
-        int4 i = idx4(cId + (int3)(1, 1, 2), grid->Ex.size);
+        int4 i = idx4(cell_id + (int3)(1, 1, 2), grid->Ex.size);
         Ex[i.z] = val;
         Ex[i.w] = val;
     }
@@ -62,55 +62,55 @@ void SetEx(struct Grid *grid, float val)
 
 void SetEy(struct Grid *grid, float val)
 {
-    int3 ls = grid->wi.local_size;
-    int3 cId = grid->wi.cell_id;
+    int3 local_size = grid->wi.local_size;
+    int3 cell_id = grid->wi.cell_id;
     local float *Ey = grid->Ey.data;
 
-    int4 i = idx4(cId + (int3)1, grid->Ey.size);
+    int4 i = idx4(cell_id + (int3)1, grid->Ey.size);
     Ey[i.x] = val;
     Ey[i.z] = val;
     Ey[i.x + 1] = val;
     Ey[i.z + 1] = val;
 
-    if (cId.x == 0)
+    if (cell_id.x == 0)
     {
-        int4 i = idx4(cId + (int3)(0, 1, 1), grid->Ey.size);
+        int4 i = idx4(cell_id + (int3)(0, 1, 1), grid->Ey.size);
         Ey[i.x] = val;
         Ey[i.z] = val;
     }
-    else if (cId.x == ls.x - 1)
+    else if (cell_id.x == local_size.x - 1)
     {
-        int4 i = idx4(cId + (int3)(2, 1, 1), grid->Ey.size);
+        int4 i = idx4(cell_id + (int3)(2, 1, 1), grid->Ey.size);
         Ey[i.x + 1] = val;
         Ey[i.z + 1] = val;
     }
 
-    if (cId.y == 0)
+    if (cell_id.y == 0)
     {
-        int4 i = idx4(cId + (int3)(1, 0, 1), grid->Ey.size);
+        int4 i = idx4(cell_id + (int3)(1, 0, 1), grid->Ey.size);
         Ey[i.x] = val;
         Ey[i.z] = val;
         Ey[i.x + 1] = val;
         Ey[i.z + 1] = val;
     }
-    else if (cId.y == ls.y - 1)
+    else if (cell_id.y == local_size.y - 1)
     {
-        int4 i = idx4(cId + (int3)(1, 2, 1), grid->Ey.size);
+        int4 i = idx4(cell_id + (int3)(1, 2, 1), grid->Ey.size);
         Ey[i.x] = val;
         Ey[i.z] = val;
         Ey[i.x + 1] = val;
         Ey[i.z + 1] = val;
     }
 
-    if (cId.z == 0)
+    if (cell_id.z == 0)
     {
-        int4 i = idx4(cId + (int3)(1, 1, 0), grid->Ey.size);
+        int4 i = idx4(cell_id + (int3)(1, 1, 0), grid->Ey.size);
         Ey[i.x] = val;
         Ey[i.x + 1] = val;
     }
-    else if (cId.z == ls.z - 1)
+    else if (cell_id.z == local_size.z - 1)
     {
-        int4 i = idx4(cId + (int3)(1, 1, 2), grid->Ey.size);
+        int4 i = idx4(cell_id + (int3)(1, 1, 2), grid->Ey.size);
         Ey[i.z] = val;
         Ey[i.z + 1] = val;
     }
@@ -118,53 +118,53 @@ void SetEy(struct Grid *grid, float val)
 
 void SetEz(struct Grid *grid, float val)
 {
-    int3 ls = grid->wi.local_size;
-    int3 cId = grid->wi.cell_id;
+    int3 local_size = grid->wi.local_size;
+    int3 cell_id = grid->wi.cell_id;
     local float *Ez = grid->Ez.data;
 
-    int4 i = idx4(cId + (int3)1, grid->Ez.size);
+    int4 i = idx4(cell_id + (int3)1, grid->Ez.size);
     Ez[i.x] = val;
     Ez[i.y] = val;
     Ez[i.x + 1] = val;
     Ez[i.y + 1] = val;
 
-    if (cId.x == 0)
+    if (cell_id.x == 0)
     {
-        int4 i = idx4(cId + (int3)(0, 1, 1), grid->Ez.size);
+        int4 i = idx4(cell_id + (int3)(0, 1, 1), grid->Ez.size);
         Ez[i.x] = val;
         Ez[i.y] = val;
     }
-    else if (cId.x == ls.x - 1)
+    else if (cell_id.x == local_size.x - 1)
     {
-        int4 i = idx4(cId + (int3)(2, 1, 1), grid->Ez.size);
+        int4 i = idx4(cell_id + (int3)(2, 1, 1), grid->Ez.size);
         Ez[i.x + 1] = val;
         Ez[i.y + 1] = val;
     }
 
-    if (cId.y == 0)
+    if (cell_id.y == 0)
     {
-        int4 i = idx4(cId + (int3)(1, 0, 1), grid->Ez.size);
+        int4 i = idx4(cell_id + (int3)(1, 0, 1), grid->Ez.size);
         Ez[i.x] = val;
         Ez[i.x + 1] = val;
     }
-    else if (cId.y == ls.y - 1)
+    else if (cell_id.y == local_size.y - 1)
     {
-        int4 i = idx4(cId + (int3)(1, 2, 1), grid->Ez.size);
+        int4 i = idx4(cell_id + (int3)(1, 2, 1), grid->Ez.size);
         Ez[i.y] = val;
         Ez[i.y + 1] = val;
     }
 
-    if (cId.z == 0)
+    if (cell_id.z == 0)
     {
-        int4 i = idx4(cId + (int3)(1, 1, 0), grid->Ez.size);
+        int4 i = idx4(cell_id + (int3)(1, 1, 0), grid->Ez.size);
         Ez[i.x] = val;
         Ez[i.y] = val;
         Ez[i.x + 1] = val;
         Ez[i.y + 1] = val;
     }
-    else if (cId.z == ls.z - 1)
+    else if (cell_id.z == local_size.z - 1)
     {
-        int4 i = idx4(cId + (int3)(1, 1, 2), grid->Ez.size);
+        int4 i = idx4(cell_id + (int3)(1, 1, 2), grid->Ez.size);
         Ez[i.x] = val;
         Ez[i.y] = val;
         Ez[i.x + 1] = val;
@@ -174,58 +174,58 @@ void SetEz(struct Grid *grid, float val)
 
 void SetBx(struct Grid *grid, float val)
 {
-    int3 ls = grid->wi.local_size;
-    int3 cId = grid->wi.cell_id;
+    int3 local_size = grid->wi.local_size;
+    int3 cell_id = grid->wi.cell_id;
     local float *Bx = grid->Bx.data;
     
-    int4 i = idx4(cId + (int3)1, grid->Bx.size);
+    int4 i = idx4(cell_id + (int3)1, grid->Bx.size);
     Bx[i.x] = val;
     Bx[i.x + 1] = val;
 
-    if (cId.x == 0)
+    if (cell_id.x == 0)
     {
-        int i = idx(cId + (int3)(0, 1, 1), grid->Bx.size);
+        int i = idx(cell_id + (int3)(0, 1, 1), grid->Bx.size);
         Bx[i] = val;
     }
-    else if (cId.x == ls.x - 1)
+    else if (cell_id.x == local_size.x - 1)
     {
-        int i = idx(cId + (int3)(2, 1, 1), grid->Bx.size);
+        int i = idx(cell_id + (int3)(2, 1, 1), grid->Bx.size);
         Bx[i] = val;
     }
 
-    if (cId.y == 0)
+    if (cell_id.y == 0)
     {
-        int4 i = idx4(cId + (int3)(1, 0, 1), grid->Bx.size);
+        int4 i = idx4(cell_id + (int3)(1, 0, 1), grid->Bx.size);
         Bx[i.x] = val;
         Bx[i.x + 1] = val;
     }
-    else if (cId.y == ls.y - 1)
+    else if (cell_id.y == local_size.y - 1)
     {
-        int4 i = idx4(cId + (int3)(1, 2, 1), grid->Bx.size);
-        Bx[i.x] = val;
-        Bx[i.x + 1] = val;
-    }
-
-    if (cId.z == 0)
-    {
-        int4 i = idx4(cId + (int3)(1, 1, 0), grid->Bx.size);
-        Bx[i.x] = val;
-        Bx[i.x + 1] = val;
-    }
-    else if (cId.z == ls.z - 1)
-    {
-        int4 i = idx4(cId + (int3)(1, 1, 2), grid->Bx.size);
+        int4 i = idx4(cell_id + (int3)(1, 2, 1), grid->Bx.size);
         Bx[i.x] = val;
         Bx[i.x + 1] = val;
     }
 
-    if ((cId.y == 0 || cId.y == ls.y - 1) && (cId.z == 0 || cId.z == ls.z - 1))
+    if (cell_id.z == 0)
     {
-        int dy = cId.y == 0 ? 0 : 2;
-        int dz = cId.z == 0 ? 0 : 2;
+        int4 i = idx4(cell_id + (int3)(1, 1, 0), grid->Bx.size);
+        Bx[i.x] = val;
+        Bx[i.x + 1] = val;
+    }
+    else if (cell_id.z == local_size.z - 1)
+    {
+        int4 i = idx4(cell_id + (int3)(1, 1, 2), grid->Bx.size);
+        Bx[i.x] = val;
+        Bx[i.x + 1] = val;
+    }
+
+    if ((cell_id.y == 0 || cell_id.y == local_size.y - 1) && (cell_id.z == 0 || cell_id.z == local_size.z - 1))
+    {
+        int dy = cell_id.y == 0 ? 0 : 2;
+        int dz = cell_id.z == 0 ? 0 : 2;
         int3 delta = (int3)(1, dy, dz);
 
-        int4 i = idx4(cId + delta, grid->Bx.size);
+        int4 i = idx4(cell_id + delta, grid->Bx.size);
         Bx[i.x] = val;
         Bx[i.x + 1] = val;
     }
@@ -234,58 +234,58 @@ void SetBx(struct Grid *grid, float val)
 
 void SetBy(struct Grid *grid, float val)
 {
-    int3 ls = grid->wi.local_size;
-    int3 cId = grid->wi.cell_id;
+    int3 local_size = grid->wi.local_size;
+    int3 cell_id = grid->wi.cell_id;
     local float *By = grid->By.data;
     
-    int4 i = idx4(cId + (int3)1, grid->By.size);
+    int4 i = idx4(cell_id + (int3)1, grid->By.size);
     By[i.x] = val;
     By[i.y] = val;
 
-    if (cId.x == 0)
+    if (cell_id.x == 0)
     {
-        int4 i = idx4(cId + (int3)(0, 1, 1), grid->By.size);
+        int4 i = idx4(cell_id + (int3)(0, 1, 1), grid->By.size);
         By[i.x] = val;
         By[i.y] = val;
     }
-    else if (cId.x == ls.x - 1)
+    else if (cell_id.x == local_size.x - 1)
     {
-        int4 i = idx4(cId + (int3)(2, 1, 1), grid->By.size);
+        int4 i = idx4(cell_id + (int3)(2, 1, 1), grid->By.size);
         By[i.x] = val;
         By[i.y] = val;
     }
 
-    if (cId.y == 0)
+    if (cell_id.y == 0)
     {
-        int i = idx(cId + (int3)(1, 0, 1), grid->By.size);
+        int i = idx(cell_id + (int3)(1, 0, 1), grid->By.size);
         By[i] = val;
     }
-    else if (cId.y == ls.y - 1)
+    else if (cell_id.y == local_size.y - 1)
     {
-        int i = idx(cId + (int3)(1, 2, 1), grid->By.size);
+        int i = idx(cell_id + (int3)(1, 2, 1), grid->By.size);
         By[i] = val;
     }
 
-    if (cId.z == 0)
+    if (cell_id.z == 0)
     {
-        int4 i = idx4(cId + (int3)(1, 1, 0), grid->By.size);
+        int4 i = idx4(cell_id + (int3)(1, 1, 0), grid->By.size);
         By[i.x] = val;
         By[i.y] = val;
     }
-    else if (cId.z == ls.z - 1)
+    else if (cell_id.z == local_size.z - 1)
     {
-        int4 i = idx4(cId + (int3)(1, 1, 2), grid->By.size);
+        int4 i = idx4(cell_id + (int3)(1, 1, 2), grid->By.size);
         By[i.x] = val;
         By[i.y] = val;
     }
 
-    if ((cId.x == 0 || cId.x == ls.x - 1) && (cId.z == 0 || cId.z == ls.z - 1))
+    if ((cell_id.x == 0 || cell_id.x == local_size.x - 1) && (cell_id.z == 0 || cell_id.z == local_size.z - 1))
     {
-        int dx = cId.x == 0 ? 0 : 2;
-        int dz = cId.z == 0 ? 0 : 2;
+        int dx = cell_id.x == 0 ? 0 : 2;
+        int dz = cell_id.z == 0 ? 0 : 2;
         int3 delta = (int3)(dx, 1, dz);
 
-        int4 i = idx4(cId + delta, grid->By.size);
+        int4 i = idx4(cell_id + delta, grid->By.size);
         By[i.x] = val;
         By[i.y] = val;
     }
@@ -293,58 +293,58 @@ void SetBy(struct Grid *grid, float val)
 
 void SetBz(struct Grid *grid, float val)
 {
-    int3 ls = grid->wi.local_size;
-    int3 cId = grid->wi.cell_id;
+    int3 local_size = grid->wi.local_size;
+    int3 cell_id = grid->wi.cell_id;
     local float *Bz = grid->Bz.data;
     
-    int4 i = idx4(cId + (int3)1, grid->Bz.size);
+    int4 i = idx4(cell_id + (int3)1, grid->Bz.size);
     Bz[i.x] = val;
     Bz[i.z] = val;
 
-    if (cId.x == 0)
+    if (cell_id.x == 0)
     {
-        int4 i = idx4(cId + (int3)(0, 1, 1), grid->Bz.size);
+        int4 i = idx4(cell_id + (int3)(0, 1, 1), grid->Bz.size);
         Bz[i.x] = val;
         Bz[i.z] = val;
     }
-    else if (cId.x == ls.x - 1)
+    else if (cell_id.x == local_size.x - 1)
     {
-        int4 i = idx4(cId + (int3)(2, 1, 1), grid->Bz.size);
-        Bz[i.x] = val;
-        Bz[i.z] = val;
-    }
-
-    if (cId.y == 0)
-    {
-        int4 i = idx4(cId + (int3)(1, 0, 1), grid->Bz.size);
-        Bz[i.x] = val;
-        Bz[i.z] = val;
-    }
-    else if (cId.y == ls.y - 1)
-    {
-        int4 i = idx4(cId + (int3)(1, 2, 1), grid->Bz.size);
+        int4 i = idx4(cell_id + (int3)(2, 1, 1), grid->Bz.size);
         Bz[i.x] = val;
         Bz[i.z] = val;
     }
 
-    if (cId.z == 0)
+    if (cell_id.y == 0)
     {
-        int i = idx(cId + (int3)(1, 1, 0), grid->Bz.size);
+        int4 i = idx4(cell_id + (int3)(1, 0, 1), grid->Bz.size);
+        Bz[i.x] = val;
+        Bz[i.z] = val;
+    }
+    else if (cell_id.y == local_size.y - 1)
+    {
+        int4 i = idx4(cell_id + (int3)(1, 2, 1), grid->Bz.size);
+        Bz[i.x] = val;
+        Bz[i.z] = val;
+    }
+
+    if (cell_id.z == 0)
+    {
+        int i = idx(cell_id + (int3)(1, 1, 0), grid->Bz.size);
         Bz[i] = val;
     }
-    else if (cId.z == ls.z - 1)
+    else if (cell_id.z == local_size.z - 1)
     {
-        int i = idx(cId + (int3)(1, 1, 2), grid->Bz.size);
+        int i = idx(cell_id + (int3)(1, 1, 2), grid->Bz.size);
         Bz[i] = val;
     }
 
-    if ((cId.x == 0 || cId.x == ls.x - 1) && (cId.y == 0 || cId.y == ls.y - 1))
+    if ((cell_id.x == 0 || cell_id.x == local_size.x - 1) && (cell_id.y == 0 || cell_id.y == local_size.y - 1))
     {
-        int dx = cId.x == 0 ? 0 : 2;
-        int dy = cId.y == 0 ? 0 : 2;
+        int dx = cell_id.x == 0 ? 0 : 2;
+        int dy = cell_id.y == 0 ? 0 : 2;
         int3 delta = (int3)(dx, dy, 1);
 
-        int4 i = idx4(cId + delta, grid->Bz.size);
+        int4 i = idx4(cell_id + delta, grid->Bz.size);
         Bz[i.x] = val;
         Bz[i.z] = val;
     }
