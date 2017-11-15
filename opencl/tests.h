@@ -1,9 +1,9 @@
-#ifndef _TEST_H_
-#define _TEST_H_
+#ifndef _TESTS_H_
+#define _TESTS_H_
 
 #include "cl_descriptor.h"
 
-void TestGrid(cl_Descriptor &cld);
+bool TestGrid(cl_Descriptor &cld);
 void TestBoris(cl_Descriptor &cld);
 
-#endif
+#endif // _TESTS_H_

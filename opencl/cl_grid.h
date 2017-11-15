@@ -15,7 +15,7 @@ public:
     cl_Lattice(cl_Descriptor &cld, const Vector3i &size) :
         cl_buffer(cl_Buffer<real_t>(cld, CL_MEM_READ_WRITE, size.x * size.y * size.z)),
         size(size),
-        data(cl_buffer.data)
+        data(cl_buffer.RawData())
     { }
 
     Vector3i GetSize() const { return size; }
@@ -29,7 +29,7 @@ public:
     }
 private:
     Vector3i size;
-    std::vector<real_t> &data;
+    real_t *data;
 };
 
 class cl_Grid

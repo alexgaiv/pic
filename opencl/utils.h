@@ -11,7 +11,7 @@
     for (int j = 0; j < (s).y; j++) \
     for (int k = 0; k < (s).z; k++)
 
-#define FOR3_(i, j, k, s) \
+#define FOR3_INNER(i, j, k, s) \
     for (int i = 1; i < (s).x - 1; i++) \
     for (int j = 1; j < (s).y - 1; j++) \
     for (int k = 1; k < (s).z - 1; k++)

@@ -7,24 +7,24 @@
 #include "grid.hcl"
 #include "init_fields.hcl"
 
-struct ErrorStruct
+typedef struct
 {
     float abs;
     float rel;
-};
+} ErrorStruct;
 
-struct CoordsMomentumError
+typedef struct
 {
-    struct ErrorStruct r;
-    struct ErrorStruct p;
-};
+    ErrorStruct r;
+    ErrorStruct p;
+} CoordsMomentumError;
 
-struct CoordsMomentumError TestBoris_1(struct Grid *grid, int steps, float E0)
+CoordsMomentumError TestBoris_1(Grid *grid, int steps, float E0)
 {
-    struct CoordsMomentumError err;
-    struct ErrorStruct *r_error = &err.r, *p_error = &err.p;
+    CoordsMomentumError err;
+    ErrorStruct *r_error = &err.r, *p_error = &err.p;
 
-    struct Particle p;
+    Particle p;
     p.mass = electronMass;
     p.charge = electronCharge;
     p.coords = (float3)0;
@@ -47,15 +47,15 @@ struct CoordsMomentumError TestBoris_1(struct Grid *grid, int steps, float E0)
     return err;
 }
 
-struct CoordsMomentumError TestBoris_2(struct Grid *grid, int steps, float B0)
+CoordsMomentumError TestBoris_2(Grid *grid, int steps, float B0)
 {
-    struct CoordsMomentumError err;
-    struct ErrorStruct *r_error = &err.r, *p_error = &err.p;
+    CoordsMomentumError err;
+    ErrorStruct *r_error = &err.r, *p_error = &err.p;
 
     const float mc = electronMass * c;
     const float p0 = 5.0;
 
-    struct Particle p;
+    Particle p;
     p.mass = electronMass;
     p.charge = electronCharge;
     p.coords = (float3)0.0;
@@ -77,7 +77,7 @@ struct CoordsMomentumError TestBoris_2(struct Grid *grid, int steps, float B0)
 }
 
 void TestBoris(
-    struct Grid *grid,
+    Grid *grid,
     int startN, int dN, int numIterations,
     global float *r_rel_test1,
     global float *r_abs_test1,
@@ -106,7 +106,7 @@ void TestBoris(
         int N = startN;
         for (int i = 0; i < numIterations; i++, N += dN)
         {
-            struct CoordsMomentumError err = TestBoris_1(grid, N, E0);
+            CoordsMomentumError err = TestBoris_1(grid, N, E0);
             r_rel_test1[i] = err.r.rel;
             r_abs_test1[i] = err.r.abs;
             p_rel_test1[i] = err.p.rel;
@@ -123,7 +123,7 @@ void TestBoris(
         int N = startN;
         for (int i = 0; i < numIterations; i++, N += dN)
         {
-            struct CoordsMomentumError err = TestBoris_2(grid, N, B0);
+            CoordsMomentumError err = TestBoris_2(grid, N, B0);
             r_rel_test2[i] = err.r.rel;
             r_abs_test2[i] = err.r.abs;
             p_rel_test2[i] = err.p.rel;
@@ -132,7 +132,7 @@ void TestBoris(
     }
 }
 
-void TestGrid(struct Grid *grid, global int *result)
+void TestGrid(Grid *grid, global int *result)
 {
     float3 cell_size = grid->cell_size;
     float3 vmin = grid->vmin;
@@ -195,7 +195,7 @@ void TestGrid(struct Grid *grid, global int *result)
     barrier(CLK_LOCAL_MEM_FENCE);
 
     float3 p = (convert_float3(cId_g) + (float3)0.3) * cell_size;
-    struct FieldPoint f = grid_InterpolateField(grid, p);
+    FieldPoint f = grid_InterpolateField(grid, p);
     result[idx(cId_g, grid->wi.global_size)] = fabs(f.E.x - p.x) < PRECISION ? 1 : 0;
 }
 

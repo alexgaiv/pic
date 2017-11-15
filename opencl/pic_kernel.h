@@ -1,9 +1,10 @@
 #ifndef _PIC_KERNEL_H_
 #define _PIC_KERNEL_H_
 
-#include "common.h"
 #include <iostream>
 #include <vector>
+
+#include "common.h"
 #include "real_t.h"
 #include "utils.h"
 #include "cl_buffer.h"
@@ -13,16 +14,10 @@ class PicKernel
 {
 public:
     PicKernel() : lastArgIdx(0) { }
-
-    PicKernel(cl_Descriptor &cld, const char *filename, cl_Grid &grid, bool verbose = false)
-        : cld(cld), lastArgIdx(0)
-    {
-        Init(cld, filename, grid, verbose);
-    }
+    PicKernel(cl_Descriptor &cld, const char *filename,
+        const char *include_dir, cl_Grid &grid, bool verbose = false);
 
     cl::Kernel GetKernel() const { return kernel; }
-
-    void Init(cl_Descriptor &cld, const char *filename, cl_Grid &grid, bool verbose);
 
     template<class T>
     void AddArg(T value) {

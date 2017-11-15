@@ -3,11 +3,11 @@
 #include "particle_mover.hcl"
 #include "utils.hcl"
 
-void CopyBoundsJx(struct Grid *grid);
-void ReduceJx(struct Grid *grid);
-void ZeroJSum(struct Grid *grid);
-void CopyEJx(struct Grid *grid, struct Field *field);
-void CopyBz(struct Grid *grid);
+void CopyBoundsJx(Grid *grid);
+void ReduceJx(Grid *grid);
+void ZeroJSum(Grid *grid);
+void CopyEJx(Grid *grid, Field *field);
+void CopyBz(Grid *grid);
 
 kernel void main(
     float3 vmin, float3 vmax,
@@ -20,16 +20,16 @@ kernel void main(
     local float *Bx, local float *By, local float *Bz,
     local float *Jx, local float *Jy, local float *Jz,
 
-    local float *Jx_sum, local float *Jy_sum, local float *Jz_sum,
-    global float *Jx_bounds, global float *Jy_bounds, global float *Jz_bounds,
+    local float *Jx_sum, local float *Jy_sum, local float *Jz_sum, // per-cell local buffers
+    global float *Jx_bounds, global float *Jy_bounds, global float *Jz_bounds, // inter-group global buffers
 
-    global float *Jx_sum_g, global float *Jy_sum_g, global float *Jz_sum_g,
+    global float *Jx_sum_g, global float *Jy_sum_g, global float *Jz_sum_g, // for debugging
     global float3 *particles_g)
 {
-    struct WorkItemInfo wi;
+    WorkItemInfo wi;
     initWorkItemInfo(&wi);
 
-    struct Grid grid;
+    Grid grid;
     initGrid(
         &grid, &wi, vmin, vmax,
         Ex, Ey, Ez, Bx, By, Bz, Jx, Jy, Jz,
@@ -58,7 +58,7 @@ kernel void main(
     {
         for (int i = 0; i < particlesPerCell; i++)
         {
-            struct Particle p;
+            Particle p;
             p.coords = particles_g[pt_offset + i];
             p.mass = electronMass;
             p.charge = electronCharge;
@@ -89,7 +89,7 @@ kernel void main(
     CopyEJx(&grid, &grid.Jx);
 }
 
-void CopyBoundsJx(struct Grid *grid)
+void CopyBoundsJx(Grid *grid)
 {
     int3 cell_id       = grid->wi.cell_id;
     int3 cell_id_g     = grid->wi.global_cell_id;
@@ -144,7 +144,7 @@ void CopyBoundsJx(struct Grid *grid)
     }
 }
 
-void ReduceJx(struct Grid *grid)
+void ReduceJx(Grid *grid)
 {
     int3 cell_id       = grid->wi.cell_id + (int3)1;
     int3 group_id      = grid->wi.group_id;
@@ -172,7 +172,8 @@ void ReduceJx(struct Grid *grid)
         if (cell_id.x != bound) continue;
 
         int gx = group_id.x + (1 - d);
-        d == 0 ? hi-- : low--;
+        //d == 0 ? hi-- : low--;
+        d == 0 ? hi-- : low++;
         
         j1 +=
             jx_bounds[12 * idx_(gx, j, k, x_bounds_size) + idx_(d, 0, 0, minor_size)] +
@@ -237,7 +238,7 @@ void ReduceJx(struct Grid *grid)
 }
 
 void _ZeroJSum(
-    struct Grid *grid,
+    Grid *grid,
     int coord1, int coord2, int bound1, int bound2,
     int3 s, int i1, int i2)
 {
@@ -264,7 +265,7 @@ void _ZeroJSum(
     }
 }
 
-void ZeroJSum(struct Grid *grid)
+void ZeroJSum(Grid *grid)
 {
     int3 cell_id = grid->wi.cell_id;
     int3 local_size = grid->wi.local_size;
@@ -353,7 +354,7 @@ void ZeroJSum(struct Grid *grid)
     }
 }
 
-void CopyEJx(struct Grid *grid, struct Field *field)
+void CopyEJx(Grid *grid, Field *field)
 {
     int3 cell_id = grid->wi.cell_id;
     int3 cell_id_g = grid->wi.global_cell_id;
@@ -419,7 +420,7 @@ void CopyEJx(struct Grid *grid, struct Field *field)
     }
 }
 
-void CopyBz(struct Grid *grid)
+void CopyBz(Grid *grid)
 {
     int3 cell_id = grid->wi.cell_id;
     int3 cell_id_g = grid->wi.global_cell_id;

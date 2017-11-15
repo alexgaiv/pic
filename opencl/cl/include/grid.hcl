@@ -12,47 +12,47 @@ constant float3 shift_Bx = (float3)(1, 0.5, 0.5);
 constant float3 shift_By = (float3)(0.5, 1, 0.5);
 constant float3 shift_Bz = (float3)(0.5, 0.5, 1);
 
-struct FieldPoint
+typedef struct
 {
     float3 E;
     float3 B;
-};
+} FieldPoint;
 
-struct Field
+typedef struct
 {
     local float *data;
     int3 size;
     global float *data_g;
     int3 size_g;
-};
+} Field;
 
-struct JBoundsBuffer
+typedef struct
 {
     global float *data;
     int3 x_size;
     int3 y_size;
     int3 z_size;
     int3 minor_size;
-};
+} JBoundsBuffer;
 
-struct Grid
+typedef struct
 {
-    struct WorkItemInfo wi;
+    WorkItemInfo wi;
     float3 vmin, vmax;
     float3 cell_size;
 
-    struct Field Ex, Ey, Ez;
-    struct Field Bx, By, Bz;
-    struct Field Jx, Jy, Jz;
-    struct Field Jx_sum, Jy_sum, Jz_sum;
-    //struct Field Jx_bounds, Jy_bounds, Jz_bounds;
-    struct JBoundsBuffer Jx_bounds, Jy_bounds, Jz_bounds;
+    Field Ex, Ey, Ez;
+    Field Bx, By, Bz;
+    Field Jx, Jy, Jz;
+    Field Jx_sum, Jy_sum, Jz_sum;
+    //Field Jx_bounds, Jy_bounds, Jz_bounds;
+    JBoundsBuffer Jx_bounds, Jy_bounds, Jz_bounds;
 
     float _inv_cell_volume;
-};
+} Grid;
 
 void initField(
-    struct Field *field,
+    Field *field,
     local float *data, int3 size,
     global float *data_g, int3 size_g)
 {
@@ -63,7 +63,7 @@ void initField(
 }
 
 void initJBoundsBuffer(
-    struct JBoundsBuffer *buffer,
+    JBoundsBuffer *buffer,
     global float *data,
     int3 x_size, int3 y_size, int3 z_size,
     int3 minor_size)
@@ -76,8 +76,8 @@ void initJBoundsBuffer(
 }
 
 void initGrid(
-    struct Grid *grid,
-    struct WorkItemInfo *wi,
+    Grid *grid,
+    WorkItemInfo *wi,
     float3 vmin, float3 vmax,
     
     local float *Ex, local float *Ey, local float *Ez,
@@ -145,7 +145,7 @@ void initGrid(
     //initField(&grid->Jz_bounds, 0, (int3)0, Jz_bounds, jz_minor_size);
 }
 
-float field_Interpolate(struct Field *field, int3 cell, float3 coords)
+float field_Interpolate(Field *field, int3 cell, float3 coords)
 {
     int4 i = idx4(cell, field->size);
     float3 c = coords - convert_float3(cell);
@@ -163,7 +163,7 @@ float field_Interpolate(struct Field *field, int3 cell, float3 coords)
     return c0 * c_inv.z + c1 * c.z;
 }
 
-struct FieldPoint grid_InterpolateField(struct Grid *grid, float3 coords)
+FieldPoint grid_InterpolateField(Grid *grid, float3 coords)
 {
     float3 pos = (coords - grid->vmin) / grid->cell_size -
         convert_float3(grid->wi.group_offset);
@@ -184,7 +184,7 @@ struct FieldPoint grid_InterpolateField(struct Grid *grid, float3 coords)
     cell_By.y = cell.y + 1;
     cell_Bz.z = cell.z + 1;
 
-    struct FieldPoint f = {
+    FieldPoint f = {
         (float3)(
             field_Interpolate(&grid->Ex, cell_Ex, pos + shift_EJx),
             field_Interpolate(&grid->Ey, cell_Ey, pos + shift_EJy),
@@ -197,7 +197,7 @@ struct FieldPoint grid_InterpolateField(struct Grid *grid, float3 coords)
     return f;
 }
 
-void field_Deposit(struct Field *field, int offset, int3 cell, float3 coords, float value)
+void field_Deposit(Field *field, int offset, int3 cell, float3 coords, float value)
 {
     int4 i = idx4(cell, field->size);
     float3 c = coords - convert_float3(cell);
@@ -215,7 +215,7 @@ void field_Deposit(struct Field *field, int offset, int3 cell, float3 coords, fl
     data[i.w + 1] += 8;//c.x * c.y * c.z * value;
 }
 
-void grid_DepositCurrents(struct Grid *grid, struct Particle *pt)
+void grid_DepositCurrents(Grid *grid, Particle *pt)
 {
     int offset = 12*idx(grid->wi.cell_id + (int3)1, grid->wi.local_size + (int3)2);
 

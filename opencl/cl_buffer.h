@@ -19,6 +19,9 @@ public:
         data(size)
     { }
 
+    DataType *RawData() { return data.data(); }
+    const DataType *RawData() const { return data.data(); }
+
     void Read() {
         queue.enqueueReadBuffer(buffer, true, 0, data.size() * sizeof(DataType), data.data());
     }

@@ -27,7 +27,7 @@ ostream &operator<<(ostream &os, const Vector3d &v)
 	return os;
 }
 
-void ConstantField(YeeGrid &grid, const Vector3d &E, const Vector3d &B)
+static void ConstantField(YeeGrid &grid, const Vector3d &E, const Vector3d &B)
 {
 	fill(grid.Ex.GetData().begin(), grid.Ex.GetData().end(), E.x);
 	fill(grid.Ey.GetData().begin(), grid.Ey.GetData().end(), E.y);
@@ -38,7 +38,7 @@ void ConstantField(YeeGrid &grid, const Vector3d &E, const Vector3d &B)
 	fill(grid.Bz.GetData().begin(), grid.Bz.GetData().end(), B.z);
 }
 
-CoordsMomentumError TestBoris_1(int steps, bool verbose = true)
+static CoordsMomentumError TestBoris_1(int steps, bool verbose = true)
 {
 	CoordsMomentumError err = { };
 	ErrorStruct &r_error = err.r, &p_error = err.p;
@@ -94,7 +94,7 @@ CoordsMomentumError TestBoris_1(int steps, bool verbose = true)
 	return err;
 }
 
-CoordsMomentumError TestBoris_2(int steps, bool verbose = true)
+static CoordsMomentumError TestBoris_2(int steps, bool verbose = true)
 {
 	CoordsMomentumError err = { };
 	ErrorStruct &r_error = err.r, &p_error = err.p;
@@ -139,7 +139,7 @@ CoordsMomentumError TestBoris_2(int steps, bool verbose = true)
 	return err;
 }
 
-void BuildBorisPlots()
+static void BuildBorisPlots()
 {
 	CoordsMomentumError err;
 

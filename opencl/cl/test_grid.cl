@@ -2,7 +2,7 @@
 #include "grid.hcl"
 #include "tests.hcl"
 
-void CopyToGlobal(struct Grid *grid);
+void CopyToGlobal(Grid *grid);
 
 kernel void main(
     float3 vmin, float3 vmax,
@@ -14,23 +14,23 @@ kernel void main(
     local float *Ex, local float *Ey, local float *Ez,
     local float *Bx, local float *By, local float *Bz,
     local float *Jx, local float *Jy, local float *Jz,
-    global int *test)
+    global int *result)
 {
-    struct WorkItemInfo wi;
+    WorkItemInfo wi;
     initWorkItemInfo(&wi);
 
-    struct Grid grid;
+    Grid grid;
     initGrid(
         &grid, &wi, vmin, vmax,
         Ex, Ey, Ez, Bx, By, Bz, Jx, Jy, Jz,
         Ex_g, Ey_g, Ez_g, Bx_g, By_g, Bz_g, Jx_g, Jy_g, Jz_g,
         0, 0, 0, 0, 0, 0);
 
-    TestGrid(&grid, test);
+    TestGrid(&grid, result);
     CopyToGlobal(&grid);
 }
 
-void CopyToGlobal(struct Grid *grid)
+void CopyToGlobal(Grid *grid)
 {
     int3 cId = grid->wi.cell_id;
     int3 cId_g = grid->wi.global_cell_id;

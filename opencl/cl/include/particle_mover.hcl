@@ -4,15 +4,15 @@
 #include "particle.hcl"
 #include "grid.hcl"
 
-struct ParticleMover
+typedef struct
 {
     float3 E, B;
     float k;
     float3 u;
     float gamma;
-};
+} ParticleMover;
 
-void particleMover_Iteration(struct ParticleMover *pm, struct Particle *pt, float dt)
+void particleMover_Iteration(ParticleMover *pm, Particle *pt, float dt)
 {
     float3 u_minus = pm->u + pm->k*pm->E;
     float3 t = (pm->k / pm->gamma) * pm->B;
@@ -27,12 +27,12 @@ void particleMover_Iteration(struct ParticleMover *pm, struct Particle *pt, floa
     pt->coords += velocity * dt;
 }
 
-void MoveParticle(struct Particle *pt, struct Grid *grid, float dt)
+void MoveParticle(Particle *pt, Grid *grid, float dt)
 {
-    struct ParticleMover pm;
+    ParticleMover pm;
     
     float mc = pt->mass * c;
-    struct FieldPoint f = grid_InterpolateField(grid, pt->coords);
+    FieldPoint f = grid_InterpolateField(grid, pt->coords);
 
     pm.E = f.E;
     pm.B = f.B;
@@ -44,12 +44,12 @@ void MoveParticle(struct Particle *pt, struct Grid *grid, float dt)
     pt->p = pm.u;
 }
 
-void MoveParticle2(struct Particle *pt, struct Grid *grid, float dt, int numSteps)
+void MoveParticle2(Particle *pt, Grid *grid, float dt, int numSteps)
 {
-    struct ParticleMover pm;
+    ParticleMover pm;
     
     float mc = pt->mass * c;
-    struct FieldPoint f = grid_InterpolateField(grid, pt->coords);
+    FieldPoint f = grid_InterpolateField(grid, pt->coords);
 
     pm.E = f.E;
     pm.B = f.B;

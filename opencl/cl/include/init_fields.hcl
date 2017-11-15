@@ -4,7 +4,7 @@
 #include "utils.hcl"
 #include "grid.hcl"
 
-void SetEx(struct Grid *grid, float val)
+void SetEx(Grid *grid, float val)
 {
     int3 local_size = grid->wi.local_size;
     int3 cell_id = grid->wi.cell_id;
@@ -60,7 +60,7 @@ void SetEx(struct Grid *grid, float val)
     }
 }
 
-void SetEy(struct Grid *grid, float val)
+void SetEy(Grid *grid, float val)
 {
     int3 local_size = grid->wi.local_size;
     int3 cell_id = grid->wi.cell_id;
@@ -116,7 +116,7 @@ void SetEy(struct Grid *grid, float val)
     }
 }
 
-void SetEz(struct Grid *grid, float val)
+void SetEz(Grid *grid, float val)
 {
     int3 local_size = grid->wi.local_size;
     int3 cell_id = grid->wi.cell_id;
@@ -172,7 +172,7 @@ void SetEz(struct Grid *grid, float val)
     }
 }
 
-void SetBx(struct Grid *grid, float val)
+void SetBx(Grid *grid, float val)
 {
     int3 local_size = grid->wi.local_size;
     int3 cell_id = grid->wi.cell_id;
@@ -232,7 +232,7 @@ void SetBx(struct Grid *grid, float val)
 }
 
 
-void SetBy(struct Grid *grid, float val)
+void SetBy(Grid *grid, float val)
 {
     int3 local_size = grid->wi.local_size;
     int3 cell_id = grid->wi.cell_id;
@@ -291,7 +291,7 @@ void SetBy(struct Grid *grid, float val)
     }
 }
 
-void SetBz(struct Grid *grid, float val)
+void SetBz(Grid *grid, float val)
 {
     int3 local_size = grid->wi.local_size;
     int3 cell_id = grid->wi.cell_id;

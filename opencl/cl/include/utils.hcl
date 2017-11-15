@@ -7,7 +7,7 @@
 
 #define PRECISION 0.0001f
 
-struct WorkItemInfo
+typedef struct
 {
     int3 local_size;
     int3 global_size;
@@ -16,9 +16,9 @@ struct WorkItemInfo
     int3 global_cell_id;
     int3 group_offset;
     int3 num_groups;
-};
+} WorkItemInfo;
 
-void initWorkItemInfo(struct WorkItemInfo *wi)
+void initWorkItemInfo(WorkItemInfo *wi)
 {
     wi->local_size  = (int3)(get_local_size(0), get_local_size(1), get_local_size(2));
     wi->global_size = (int3)(get_global_size(0), get_global_size(1), get_global_size(2));

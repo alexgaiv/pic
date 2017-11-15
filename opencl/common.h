@@ -5,7 +5,6 @@
 #define __CL_ENABLE_EXCEPTIONS
 #define NOMINMAX
 
-#include <Windows.h>
 #include <cl\cl.hpp>
 
-#endif
+#endif // _COMMON_H_

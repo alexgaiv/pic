@@ -2,9 +2,6 @@
 #include "grid.hcl"
 #include "tests.hcl"
 
-void CopyEx(struct Grid *grid);
-void CopyBz(struct Grid *grid);
-
 kernel void main(
     float3 vmin, float3 vmax,
 
@@ -27,10 +24,10 @@ kernel void main(
     global float *p_rel_test2,
     global float *p_abs_test2)
 {
-    struct WorkItemInfo wi;
+    WorkItemInfo wi;
     initWorkItemInfo(&wi);
 
-    struct Grid grid;
+    Grid grid;
     initGrid(
         &grid, &wi, vmin, vmax,
         Ex, Ey, Ez, Bx, By, Bz, Jx, Jy, Jz,
