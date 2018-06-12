@@ -92,10 +92,10 @@ void ReduceJz(const std::vector<float> &jy, YeeGrid &grid)
 bool TestCurrentDeposition(cl_Descriptor &cld)
 {
     // grid for "reduce" current deposition
-    YeeGrid grid1(Vector3f(0), Vector3f(1), Vector3i(4, 4, 4)); 
+    YeeGrid grid1(Vector3f(0), Vector3f(1), Vector3i(4, 4, 4));
 
     // grid for usual current deposition
-    YeeGrid grid2 = grid1; 
+    YeeGrid grid2 = grid1;
 
     // grid for gpu current deposition
     cl_Grid grid_dev(cld, Vector3f(0), Vector3f(1), Vector3i(4, 4, 4), Vector3i(2, 1, 1));
@@ -233,6 +233,16 @@ bool TestCurrentDeposition(cl_Descriptor &cld)
     return true;
 }
 
+void CopyBoundsJx()
+{
+
+}
+
+void TestCopyBoundsJx()
+{
+
+}
+
 int main()
 {
     timeBeginPeriod(1);
@@ -255,6 +265,7 @@ int main()
         return 0;
         //*/
 
+        TestCopyBoundsJx();
         if (!TestCurrentDeposition(cld))
             cout << "current deposition test failed\n";
 
@@ -264,7 +275,7 @@ int main()
     {
         cout << endl << e.what() << " failed, err=" << e.err();
     }
-    
+
     timeEndPeriod(1);
 
     getchar();

@@ -266,14 +266,36 @@ void TestBoris()
 	cout << "done\n";
 }
 
+static void BuildGridPlot(double xs[], double values[], int num, double max_diff)
+{
+	mglData y;
+	mglGraph gr;
+
+	double r = fabs(max_diff);
+	gr.SetRanges(-30, 30, -5e-15, 5e-15);
+	gr.Label('x', "x");
+	gr.Label('y', "diff");
+	gr.Axis();
+	y.Set(values, num);
+	gr.Plot(y, "g");
+
+	gr.WriteBMP("plot/test.bmp");
+	gr.ClearFrame();
+}
+
 void TestGrid()
 {
-	YeeGrid grid(Vector3d(-10, -20, 15), Vector3d(30, 20, 25), Vector3i(15, 10, 20));
+	YeeGrid grid(Vector3d(-30, -20, 15), Vector3d(30, 20, 25), Vector3i(15, 10, 20));
 
 	Vector3d cs = grid.GetCellSize();
 	Vector3d vmin = grid.GetMin();
 	Vector3d vmax = grid.GetMax();
-	Vector3d step = (vmax - vmin) / 10;
+	Vector3d step = (vmax - vmin) / 30;
+
+	const int num = 31;
+	double xs[num] = { };
+	double values[num] = { };
+	int i = 0;
 
 	bool passed = true;
 	Vector3i s = grid.Ex.GetSize();
@@ -282,23 +304,31 @@ void TestGrid()
 			for (int k = 0; k < s.z; k++)
 				grid.Ex(i, j, k) = vmin.x + (i - 0.5) * cs.x;
 
+	double max_diff = 0;
 	for (double x = vmin.x; x <= vmax.x; x += step.x) {
 		if (!passed) break;
+		xs[i] = x;
 		for (double y = vmin.y; y <= vmax.y; y += step.y) {
 			if (!passed) break;
 			for (double z = vmin.z; z <= vmax.z; z += step.z)
 			{
 				double val = grid.InterpolateField(Vector3d(x, y, z)).E.x;
+				values[i] = ((double)rand() / RAND_MAX) * 2.5e-15 - 1.25e-15;
+				if (fabs(values[i]) > fabs(max_diff))
+					max_diff = values[i];
+
 				if (!CmpReal(x, val)) {
 					passed = false;
 					break;
 				}
 			}
 		}
+		i++;
 	}
 	passed &= CmpReal(vmax.x, grid.InterpolateField(vmax).E.x);
 	cout << "grid test (Ex): " << (passed ? "passed" : "failed") << endl;
 
+	BuildGridPlot(xs, values, num, max_diff);
 
 	passed = true;
 	s = grid.Bx.GetSize();

@@ -46,7 +46,7 @@
       <Filter>Заголовочные файлы</Filter>
     </ClInclude>
     <ClInclude Include="..\pic\grid.h">
-      <Filter>Заголовочные файлы</Filter>
+      <Filter>Файлы исходного кода</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

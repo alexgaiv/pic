@@ -41,9 +41,6 @@
     <ClInclude Include="particle_mover.h">
       <Filter>Заголовочные файлы</Filter>
     </ClInclude>
-    <ClInclude Include="grid.h">
-      <Filter>Заголовочные файлы</Filter>
-    </ClInclude>
     <ClInclude Include="3rd_party\include\mgl2\abstract.h">
       <Filter>mathgl</Filter>
     </ClInclude>
@@ -177,6 +174,9 @@
       <Filter>Заголовочные файлы</Filter>
     </ClInclude>
     <ClInclude Include="array3D.h">
+      <Filter>Заголовочные файлы</Filter>
+    </ClInclude>
+    <ClInclude Include="grid.h">
       <Filter>Заголовочные файлы</Filter>
     </ClInclude>
   </ItemGroup>

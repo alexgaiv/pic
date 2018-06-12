@@ -54,7 +54,7 @@ kernel void main(
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    //if (cell_id_g.x == 0 && cell_id_g.y == 0 && cell_id_g.z == 0)
+    if (cell_id_g.x == 0 && cell_id_g.y == 0 && cell_id_g.z == 0)
     {
         for (int i = 0; i < particlesPerCell; i++)
         {
@@ -166,7 +166,7 @@ void ReduceJx(Grid *grid)
     
     int low = 0, hi = 3;
 
-    for (int d = 0; d < 1; d++)
+    for (int d = 0; d < 2; d++)
     {
         int bound = d == 0 ? local_size.x - 2 : 1;
         if (cell_id.x != bound) continue;
