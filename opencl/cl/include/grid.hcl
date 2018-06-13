@@ -45,7 +45,7 @@ typedef struct
     Field Bx, By, Bz;
     Field Jx, Jy, Jz;
     Field Jx_sum, Jy_sum, Jz_sum;
-    //Field Jx_bounds, Jy_bounds, Jz_bounds;
+    Field Jx_bounds, Jy_bounds, Jz_bounds;
     JBoundsBuffer Jx_bounds, Jy_bounds, Jz_bounds;
 
     float _inv_cell_volume;
@@ -140,9 +140,9 @@ void initGrid(
         (int3)(num_groups.y + 1, global_size.x + 2, global_size.z + 2),
         (int3)(num_groups.z + 1, global_size.x + 2, global_size.y + 2),
         jx_minor_size);
-    //initField(&grid->Jx_bounds, 0, (int3)0, Jx_bounds, jx_minor_size);
-    //initField(&grid->Jy_bounds, 0, (int3)0, Jy_bounds, jy_minor_size);
-    //initField(&grid->Jz_bounds, 0, (int3)0, Jz_bounds, jz_minor_size);
+    initField(&grid->Jx_bounds, 0, (int3)0, Jx_bounds, jx_minor_size);
+    initField(&grid->Jy_bounds, 0, (int3)0, Jy_bounds, jy_minor_size);
+    initField(&grid->Jz_bounds, 0, (int3)0, Jz_bounds, jz_minor_size);
 }
 
 float field_Interpolate(Field *field, int3 cell, float3 coords)
@@ -205,14 +205,14 @@ void field_Deposit(Field *field, int offset, int3 cell, float3 coords, float val
 
     local float *data = field->data + offset;
 
-    data[i.x]     += 1;//c_inv.x * c_inv.y * c_inv.z * value;
-    data[i.y]     += 2;//c_inv.x * c_inv.y * c.z * value;
-    data[i.z]     += 3;//c_inv.x * c.y * c_inv.z * value;
-    data[i.w]     += 4;//c_inv.x * c.y * c.z * value;
-    data[i.x + 1] += 5;//c.x * c_inv.y * c_inv.z * value;
-    data[i.y + 1] += 6;//c.x * c_inv.y * c.z * value;
-    data[i.z + 1] += 7;//c.x * c.y * c_inv.z * value;
-    data[i.w + 1] += 8;//c.x * c.y * c.z * value;
+    data[i.x]     += c_inv.x * c_inv.y * c_inv.z * value;
+    data[i.y]     += c_inv.x * c_inv.y * c.z * value;
+    data[i.z]     += c_inv.x * c.y * c_inv.z * value;
+    data[i.w]     += c_inv.x * c.y * c.z * value;
+    data[i.x + 1] += c.x * c_inv.y * c_inv.z * value;
+    data[i.y + 1] += c.x * c_inv.y * c.z * value;
+    data[i.z + 1] += c.x * c.y * c_inv.z * value;
+    data[i.w + 1] += c.x * c.y * c.z * value;
 }
 
 void grid_DepositCurrents(Grid *grid, Particle *pt)
@@ -232,4 +232,55 @@ void grid_DepositCurrents(Grid *grid, Particle *pt)
     field_Deposit(&grid->Jy_sum, offset, cell_Jy, pos + (float3)(0.0, 0.5, 0.0), j.y);
     field_Deposit(&grid->Jz_sum, offset, cell_Jz, pos + (float3)(0.0, 0.0, 0.5), j.z);
 }
+
+void grid_SolveField(grid, dt)
+{
+    int3 local_size = grid->wi.local_size;
+    int3 cell_id = grid->wi.cell_id;
+    float *Ex = grid->Ex.data;
+    float *Ey = grid->Ey.data;
+    float *Ez = grid->Ez.data;
+    float *Bx = grid->Bx.data;
+    float *By = grid->By.data;
+    float *Bz = grid->Bz.data;
+    float *Jx = grid->Jx.data;
+    float *Jy = grid->Jy.data;
+    float *Jz = grid->Jz.data;
+    float3 d = float3(1) / grid->cell_size;
+
+    int4 i = idx4(cell_id + (int3)1, grid->Ex.size);
+    Ex[idx4(i, local_size)] += cdt *
+                    ((Bz[idx(i, j, k, local_size)] - Bz[idx(i, j - 1, k, local_size)]) * d.y -
+                    (By[idx(i, j, k, local_size)] - By[idx(i, j, k - 1, local_size)]) * d.z) -
+                    kj * Jx(idx(i, j, k, local_size));
+
+    i = idx4(cell_id + (int3)1, grid->Ey.size);
+    Ey[idx4(i, local_size)] += cdt *
+                    ((Bz[idx(i, j, k, local_size)] - Bz[idx(i, j - 1, k, local_size)]) * d.y -
+                    (Bx[idx(i, j, k, local_size)] - Bx[idx(i, j, k - 1, local_size)]) * d.z) -
+                    kj * Jy(idx(i, j, k, local_size));
+
+
+    i = idx4(cell_id + (int3)1, grid->Ez.size);
+    Ez[idx4(i, local_size)] += cdt *
+                    ((Bz[idx(i, j, k, local_size)] - Bz[idx(i, j - 1, k, local_size)]) * d.y -
+                    (By[idx(i, j, k, local_size)] - By[idx(i, j, k - 1, local_size)]) * d.z) -
+                    kj * Jz(idx(i, j, k, local_size));
+   
+    i = idx4(cell_id + (int3)1, grid->Bx.size);
+    Bx[idx4(i, local_size)] -= cdt *
+                    ((Ez[idx(i, j, k, local_size)] - Ez[idx(i, j - 1, k, local_size)]) * d.y -
+                    (Ey[idx(i, j, k, local_size)] - Ey[idx(i, j, k - 1, local_size)]) * d.z);
+
+    i = idx4(cell_id + (int3)1, grid->By.size);
+    By[idx4(i, local_size)] -= cdt *
+                    ((Bz[idx(i, j, k, local_size)] - Ez[idx(i, j - 1, k, local_size)]) * d.y -
+                    (By[idx(i, j, k, local_size)] - Ey[idx(i, j, k - 1, local_size)]) * d.z);
+   
+    i = idx4(cell_id + (int3)1, grid->Bz.size);
+    Bz[idx4(i, local_size)] -= cdt *
+                    ((Ez[idx(i, j, k, local_size)] - Ez[idx(i, j - 1, k, local_size)]) * d.y -
+                    (Ey[idx(i, j, k, local_size)] - Ey[idx(i, j, k - 1, local_size)]) * d.z);
+}
+
 #endif // _GRID_H_

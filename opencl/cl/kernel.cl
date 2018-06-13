@@ -1,5 +1,5 @@
 #include "utils.hcl"
-#include "grid.hcl"
+#include "grid->hcl"
 #include "particle_mover.hcl"
 #include "utils.hcl"
 
@@ -54,19 +54,16 @@ kernel void main(
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    if (cell_id_g.x == 0 && cell_id_g.y == 0 && cell_id_g.z == 0)
+    for (int i = 0; i < particlesPerCell; i++)
     {
-        for (int i = 0; i < particlesPerCell; i++)
-        {
-            Particle p;
-            p.coords = particles_g[pt_offset + i];
-            p.mass = electronMass;
-            p.charge = electronCharge;
-            p.factor = 1.0;
-            particle_SetVelocity(&p, (float3)1);
+        Particle p;
+        p.coords = particles_g[pt_offset + i];
+        p.mass = electronMass;
+        p.charge = electronCharge;
+        p.factor = 1.0;
+        particle_SetVelocity(&p, (float3)1);
 
-            grid_DepositCurrents(&grid, &p);
-        }
+        grid_DepositCurrents(&grid, &p);
     }
 
     CopyBoundsJx(&grid);
@@ -86,7 +83,7 @@ kernel void main(
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    CopyEJx(&grid, &grid.Jx);
+    CopyEJx(&grid, &grid->Jx);
 }
 
 void CopyBoundsJx(Grid *grid)
@@ -118,30 +115,6 @@ void CopyBoundsJx(Grid *grid)
             jx_bounds_data[i.w] = jx_sum_data[i.w];
         }
     }
-
-    if (cell_id.y == 0)
-    {
-        int3 x_size = grid->Jx_bounds.x_size;
-        int offset = x_size.x * x_size.y * x_size.z;
-        global float *y_bounds = grid->Jx_bounds.data + offset;
-
-        int3 y_bounds_size = grid->Jx_bounds.y_size;
-        int3 bounds_cell = (int3)(cell_id_g.x, group_id.y, cell_id_g.z) + (int3)(0, 1, 1);
-        int bounds_offset = 12*idx(bounds_cell, y_bounds_size);
-    }
-    else if (cell_id.y == local_size.y - 1)
-    {
-
-    }
-
-    if (cell_id.z == 0)
-    {
-
-    }
-    else if (cell_id.z == local_size.z - 1)
-    {
-
-    }
 }
 
 void ReduceJx(Grid *grid)
@@ -172,7 +145,6 @@ void ReduceJx(Grid *grid)
         if (cell_id.x != bound) continue;
 
         int gx = group_id.x + (1 - d);
-        //d == 0 ? hi-- : low--;
         d == 0 ? hi-- : low++;
         
         j1 +=
@@ -485,21 +457,75 @@ void CopyBz(Grid *grid)
         int4 i2 = idx4(cell_id + delta, grid->Bz.size);
         grid->Bz.data_g[i1.x] = grid->Bz.data[i2.x];
         grid->Bz.data_g[i1.z] = grid->Bz.data[i2.z];
+    }
+}
 
-        /*for (int dx = 0; dx <= 2; dx += 2) {
-            int bound = dx == 0 ? 0 : global_size.x - 1;
-            if (cell_id_g.x != bound) continue;
+void ColdPlasmaOscillations(Grid *grid)
+{
+    float A = 1111;
+    float dt = 0.000000000000090453260945929121;
+    int numSteps = 3688;
+    float factor = 2941623;
+    int dumpsPerIter = 16;
 
-            for (int dy = 0; dy <= 2; dy += 2) {
-                int bound = dy == 0 ? 0 : global_size.y - 1;
-                if (cell_id_g.y != bound) continue;
+    int3 cell_id = grid->wi.cell_id;
+    int3 cell_id_g = grid->wi.global_cell_id;
+    int3 global_size = grid->wi.global_size;
 
-                int3 delta = (int3)(dx, dy, 1);
-                int4 i1 = idx4(cell_id_g + delta, grid->Bz.size_g);
-                int4 i2 = idx4(cell_id + delta, grid->Bz.size);
-                grid->Bz.data_g[i1.x] = grid->Bz.data[i2.x];
-                grid->Bz.data_g[i1.z] = grid->Bz.data[i2.z];
-            }
-        }*/
+    int3 global_size = grid->wi.global_size;
+    float3 cs = grid->cell_size;
+    float3 vmin = grid->vmin;
+    float3 vmax = grid->mvmax;
+    float3 size = vmax - vmin;
+    float3 center = (vmin + vmax) / 2;
+    float cellVolume = cs.x * cs.y * cs.z;
+
+    const int3 es(3, 3, 3);
+    
+    {
+        int3 s = numCells / es;
+        float3 min = vmin + float3(ei, ej, ek) * float3(s) * cs;
+
+        if (ei == es.x - 1) s.x += numCells.x % es.x;
+        if (ej == es.y - 1) s.y += numCells.y % es.y;
+        if (ek == es.z - 1) s.z += numCells.z % es.z;
+        
+        grid->Ex.data_g[idx(ei, ej, ek, s)] = float3(min, cs, s);
+    }
+
+    int3 s = grid->Ex.size_g;
+    {
+        float x = vmin.x + (cell_id.x - 0.5) * cs.x;
+        grid->Ex.data_g[idx4(cell_id, s)] = A * cos(2 * M_PI * x);
+    }
+
+    {
+        float3 lo = grid->vmin + float3(i, j, k) * cs;
+        float3 hi = lo + cs;
+
+        float cx = lo.x + cs.x*0.5;
+        float f = 23133870163932 * (1.0 + 0.05 * sin(2 * M_PI * cx));
+        int numParticles = int(f * cellVolume / factor);
+
+        for (int q = 0 ; q < numParticles; q++)
+        {
+            Particle p;
+            p.charge = electronCharge;
+            p.mass = electronMass;
+            p.factor = factor;
+
+            p.coords = float3(
+                frand(lo.x, hi.x),
+                frand(lo.y, hi.y),
+                frand(lo.z, hi.z));
+
+            particles_g[idx()] = p;
+        }
+    }
+    
+    for (int step = 0; step < numSteps; step++)
+    {
+        grid_DepositCurrents(grid);
+        grid_SolveField(grid, dt);
     }
 }
